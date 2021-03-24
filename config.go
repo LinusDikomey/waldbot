@@ -11,6 +11,8 @@ import (
 type Config struct {
 	GuildId string			`yaml:"guildId"`
 	StatsChannelId string	`yaml:"statsChannelId"`
+	CertFile string			`yaml:"certFile"`
+	KeyFile string			`yaml:"keyFile"`
 }
 
 var config Config = Config {}
@@ -24,6 +26,6 @@ func loadConfig() {
 	bytes, _ := ioutil.ReadAll(file)
 	err = yaml.Unmarshal(bytes, &config)
 	if err != nil {
-			log.Fatal("Error while parsing config.yaml: ", err)
+		log.Fatal("Error while parsing config.yaml: ", err)
 	}
 }
