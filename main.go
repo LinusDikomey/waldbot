@@ -76,7 +76,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Could not find guild specified in config!")
 	}
-
+	updateRankings()
+	addWebHandlers()
 	fmt.Println("Bot is now running!")
 	currentDay = dateFromTime(time.Now())
 	mainLoop()
@@ -91,7 +92,6 @@ func main() {
 
 func dayMinute(t time.Time) int16 {
 	return int16(t.Hour() * 60 + t.Minute())
-	
 }
 
 func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -185,7 +185,7 @@ func minuteUpdate() {
 }
 
 func dayUpdate(previousDay Date, newDay Date) {
-	// finish settings from previous day
+	// finish sessions from previous day
 	finishSessions()
 	saveFiles()
 }
@@ -225,6 +225,21 @@ func updateRankings() {
 	allTime, allTimeDays := calculateUserMinutes(dateAllTimeCondition, true)
 	dc.ChannelMessageEdit(config.StatsChannelId, fmt.Sprint(data.ServerdatenMessageId), createRankingsMessage("**Gesamte Sprachchatzeiten**", allTime, allTimeDays))
 
+	// api stats
+	apiStats = ApiStats {
+		Ranking: make([]ApiUserStats, len(allTime)),
+	}
+	for i, user := range allTime {
+		name := ""
+		if member, err := dc.State.Member(config.GuildId, longUserId(user.userId)); err == nil {
+			name = effectiveName(member)
+		}
+
+		apiStats.Ranking[i] = ApiUserStats {
+			Username: name,
+			Minutes: user.minutes,
+		}
+	}
 }
 
 func createRankingsMessage(header string, stats []UserStats, dayCount int) string {
