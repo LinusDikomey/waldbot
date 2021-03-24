@@ -139,7 +139,7 @@ func parseUserOrTime(args string, channel string, member *discordgo.Member) (boo
 						endDate = parseDate(dateRangeSplit[1])
 					}
 					if startDate == nil || endDate == nil {
-						dc.ChannelMessageSend(args, "Invalides Datum angegeben!")
+						dc.ChannelMessageSend(channel, "Invalides Datum angegeben!")
 						return false, nil, nil
 					}
 					dateCondition = func(day Date) bool {
@@ -152,7 +152,7 @@ func parseUserOrTime(args string, channel string, member *discordgo.Member) (boo
 			if !isDate {
 				member = parseMember(args)
 				if member == nil {
-					dc.ChannelMessageSend(args, "Der angegebene Nutzer wurde nicht gefunden!")
+					dc.ChannelMessageSend(channel, "Der angegebene Nutzer wurde nicht gefunden!")
 					return false, nil, nil
 				}
 			}
