@@ -213,6 +213,16 @@ func dateWeeklyCondition(day Date) bool {
 	return !dateIsSmaller(day, mondayDate)
 }
 
+func dateMonthlyCondition(day Date) bool {
+	firstOfMonth := Date {day: 1, month: currentDay.month, year: currentDay.year }
+	return !dateIsSmaller(day, firstOfMonth)
+}
+
+func dateYearlyCondition(day Date) bool {
+	firstOfYear := Date {day: 1, month: 1, year: currentDay.year}
+	return !dateIsSmaller(day, firstOfYear)
+}
+
 func dateAllTimeCondition(day Date) bool {
 	return true
 }
