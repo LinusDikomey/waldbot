@@ -28,6 +28,7 @@ var commands = [...]Command{
 	{prefix: "mate", handler: mateHandler},
 	{prefix: "mates", handler: matesHandler},
 	{prefix: "stonks", handler: stonksHandler},
+	{prefix: "usercount", handler: userCountHandler},
 }
 
 // this is stupid but it looks like it has to be done to avoid initialization cycle errors
@@ -41,6 +42,7 @@ var commandDescriptions = [...]Command{
 	{prefix: "mate {Nutzer}", description: "Zeigt deine Zeit mit einem Nutzer an"},
 	{prefix: "mates", description: "Zeigt ein Tortendiagramm der Sprachchatzeit mit anderen Nutzern"},
 	{prefix: "stonks {optional: Nutzer/Zeitfenster}", description: "GME TO THE MOON"},
+	{prefix: "usercount", description: "Zeigt die Besucher des Discords pro Tag an"},
 }
 
 func pingCommand(content string, channel string, author *discordgo.Member) {
@@ -335,7 +337,9 @@ func stonksHandler(args string, channel string, author *discordgo.Member) {
 	var yValues []float64
 	var allTimeMinutes uint32
 	for _, date := range dates {
-		if !dateCondition(date) { continue }
+		if !dateCondition(date) {
+			continue
+		}
 		var minutes uint32
 		for _, channel := range dayData[date].channels {
 			for _, session := range channel {
@@ -394,4 +398,85 @@ func stonksHandler(args string, channel string, author *discordgo.Member) {
 		log.Fatal("Error while creating diagram: ", err)
 	}
 	dc.ChannelFileSend(channel, "stonks.png", bytes.NewReader(buffer.Bytes()))
+}
+
+func userCountHandler(args string, channel string, author *discordgo.Member) {
+	ok, dateCondition, member := parseUserOrTime(args, channel, author)
+	if !ok {
+		return
+	} // error messages handled by util function, just return
+
+	dates := make([]Date, 0, len(dayData))
+
+	for date := range dayData {
+		dates = append(dates, date)
+	}
+
+	sort.Slice(dates, func(i, j int) bool {
+		return dateIsSmaller(dates[i], dates[j])
+	})
+
+	starting := true
+
+	var xValues []time.Time
+	var yValues []float64
+	for _, date := range dates {
+		if !dateCondition(date) {
+			continue
+		}
+		var users []int16
+		for _, channel := range dayData[date].channels {
+			for _, session := range channel {
+				for _, user := range users {
+					if session.userID != user {
+						users = append(users, session.userID)
+					}
+				}
+			}
+		}
+		if len(users) > 0 || !starting {
+			starting = false
+			xValues = append(xValues, time.Date(int(date.year), time.Month(date.month), int(date.day), 0, 0, 0, 0, time.Local))
+			yValues = append(yValues, float64(len(users)))
+		}
+	}
+	if len(xValues) < 2 {
+		dc.ChannelMessageSend(channel, "Nicht genug Daten gefunden!")
+		return
+	}
+
+	graph := chart.Chart{
+		Width:  1280,
+		Height: 720,
+		Background: chart.Style{
+			Padding: chart.Box{
+				Top:    80,
+				Left:   10,
+				Right:  10,
+				Bottom: 10,
+			},
+		},
+		ColorPalette: waldColorPalette,
+		Title:        "User über Zeit " + effectiveName(member),
+		XAxis: chart.XAxis{
+			Name:           "Datum",
+			ValueFormatter: chart.TimeDateValueFormatter,
+		},
+		YAxis: chart.YAxis{
+			Name:           "User",
+			ValueFormatter: chart.IntValueFormatter,
+		},
+		Series: []chart.Series{
+			chart.TimeSeries{
+				XValues: xValues,
+				YValues: yValues,
+			},
+		},
+	}
+	buffer := bytes.NewBuffer([]byte{})
+	err := graph.Render(chart.PNG, buffer)
+	if err != nil {
+		log.Fatal("Error while creating diagram: ", err)
+	}
+	dc.ChannelFileSend(channel, "userCount.png", bytes.NewReader(buffer.Bytes()))
 }
