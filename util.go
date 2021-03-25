@@ -29,7 +29,9 @@ func formatTime(minutes uint32) string {
 }
 
 func effectiveName(member *discordgo.Member) string {
-	if member.Nick != "" {
+	if member == nil {
+		return "[Unbekannter Nutzer]"
+	} else if member.Nick != "" {
 		return member.Nick
 	} else {
 		return member.User.Username

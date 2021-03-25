@@ -212,6 +212,7 @@ func dateWeeklyCondition(day Date) bool {
 	mondayDate := newDate(uint16(weekStartDate.Day()), uint8(weekStartDate.Month()), uint16(weekStartDate.Year()))
 	return !dateIsSmaller(day, mondayDate)
 }
+type DateCondition = func(Date) bool
 
 func dateMonthlyCondition(day Date) bool {
 	firstOfMonth := Date {day: 1, month: currentDay.month, year: currentDay.year }
@@ -393,4 +394,55 @@ func calculateUserMinutes(dayCondition func(Date) bool, includeActive bool) ([]U
 	}
 	sort.Slice(list, f)
 	return list, dayCount
+}
+
+func timeWithMates(user int16, dateCondition DateCondition) ([]UserStats, uint32) {
+	min := func(a, b int32) int32 {
+		if a < b { return a } else { return b }
+	}
+	mates := map[int16]UserStats {}
+	allTime := uint32(0)
+	for day, data := range dayData {
+		if !dateCondition(day) { continue }
+		for _, sessions := range data.channels {
+			for _, session := range sessions {
+				if session.userID != user { continue }
+				for _, otherSession := range sessions {
+					if otherSession.userID == user { continue }
+					var minutes int32
+					a := int32(session.dayMinute)
+					b := a + int32(session.minutes)
+					c := int32(otherSession.dayMinute)
+					d := c + int32(otherSession.minutes)
+					if a < c {
+						minutes = min(b-c, d-c)
+					} else {
+						minutes = min(d-a, b-a)
+					}
+					if minutes > 0 {
+						var stats UserStats
+						if found, ok := mates[otherSession.userID]; ok {
+							stats = found
+						} else {
+							stats = UserStats {userId: otherSession.userID, minutes: 0} 
+						}
+						stats.minutes += uint32(minutes)
+						mates[otherSession.userID] = stats
+
+						allTime += uint32(minutes)
+					}
+				}
+			}
+		}
+	}
+	slice := make([]UserStats, len(mates))
+	index := 0
+	for _, entry := range mates {
+		slice[index] = entry
+		index++
+	}
+	sort.Slice(slice, func(i, j int) bool {
+		return slice[i].minutes > slice[j].minutes
+	})
+	return slice, allTime
 }

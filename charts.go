@@ -25,7 +25,7 @@ func dayTimeChart(title string, xValues []float64, yValues []float64, maxY float
 		ColorPalette: waldColorPalette,
 		Title: title,
 		YAxis: chart.YAxis {
-			Name: "Prozente pro 5 Minuten",
+			Name: "Prozent online",
 			Range: &chart.ContinuousRange{
 				Min: 0.0,
 				Max: maxY,

@@ -25,6 +25,8 @@ var commands = [...]Command{
 	{prefix: "hours", handler: hoursCommand},
 	{prefix: "channels", handler: channelsCommand},
 	{prefix: "session", handler: sessionHandler},
+	{prefix: "mate", handler: mateHandler},
+	{prefix: "mates", handler: matesHandler},
 }
 
 // this is stupid but it looks like it has to be done to avoid initialization cycle errors
@@ -35,6 +37,8 @@ var commandDescriptions = [...]Command{
 	{prefix: "hours {optional: Nutzer/Zeitfenster}", description: "Generiert ein Diagram mit der Zeitverteilung über einen Zeitraum"},
 	{prefix: "channels {optional: Nutzer/Zeitfenster}", description: "Zeigt ein Tortendiagramm mit der Verteilung deiner genutzten Kanäle"},
 	{prefix: "session", description: "Zeigt deine aktuelle Voicechat-Session"},
+	{prefix: "mate {Nutzer}", description: "Zeigt deine Zeit mit einem Nutzer an"},
+	{prefix: "mates", description: "Zeigt ein Tortendiagramm der Sprachchatzeit mit anderen Nutzern"},
 }
 
 func pingCommand(content string, channel string, author *discordgo.Member) {
@@ -117,11 +121,12 @@ func hoursCommand(args string, channel string, author *discordgo.Member) {
 	minutesSum := uint32(0)
 	minutesBySections := make([]uint32, SECTIONS)
 
-
+	dayCount := 0
 	for date, day := range dayData {
 		if !dateCondition(date) {
 			continue
 		}
+		dayCount++
 		for _, sessions := range day.channels {
 			for _, session := range sessions {
 				if session.userID != shortUser {
@@ -154,12 +159,13 @@ func hoursCommand(args string, channel string, author *discordgo.Member) {
 	xAxis := make([]float64, SECTIONS)
 	yAxis := make([]float64, SECTIONS)
 	
+	maxMinutesPerSection := float64(SECTION_SIZE * dayCount)
 
 	maxY := float64(0)
 
 	for i := 0; i < SECTIONS; i++ {
 		xAxis[i] = float64(i * SECTION_SIZE)
-		value := float64(minutesBySections[i]) / float64(minutesSum)
+		value := float64(minutesBySections[i]) / maxMinutesPerSection
 		maxY = math.Max(maxY, value)
 		yAxis[i] = value
 	}
@@ -227,4 +233,71 @@ func sessionHandler(args string, channel string, author *discordgo.Member) {
 	} else {
 		dc.ChannelMessageSend(channel, "Du bist momentan in keinem Sprachkanal")
 	}
+}
+
+func mateHandler(args string, channel string, author *discordgo.Member) {
+	if args == "" {
+		dc.ChannelMessageSend(channel, "Bitte gib einen Nutzernamen an: **!mate {Nutzer}**")
+		return
+	}
+	mateMember := parseMember(args)
+	if mateMember == nil {
+		dc.ChannelMessageSend(channel, "Der angegebene Nutzer wurde nicht gefunden!")
+		return
+	}
+	mateId := shortUserId(mateMember.User.ID)
+	authorId := shortUserId(author.User.ID)
+	mates, _ := timeWithMates(authorId, dateAllTimeCondition)
+	for i, mate := range mates {
+		if mate.userId == mateId {
+			dc.ChannelMessageSend(channel, fmt.Sprintf(
+				"%v, deine überlappende Zeit mit %v beträgt %v (Platz %v)",
+				author.Mention(), effectiveName(mateMember), formatTime(mate.minutes), i+1))
+		}
+	}
+}
+
+func matesHandler(args string, channel string, author *discordgo.Member) {
+	const matesToShow = 9
+
+	authorId := shortUserId(author.User.ID)
+	mates, allMatesTime := timeWithMates(authorId, dateAllTimeCondition)
+	text := author.Mention() + ", deine Top-Freunde sind:\n"
+	values := []chart.Value {}
+	topMatesTime := uint32(0)
+	listCount := matesToShow
+	if len(mates) < matesToShow {
+		if len(mates) == 0 {
+			dc.ChannelMessageSend(channel, "Du hast keine Freunde " + author.Mention() + " :cry:")
+			return
+		}
+		listCount = len(mates)
+	}
+	for i := 0; i < listCount; i++ {
+		mateMember, _ := dc.State.Member(config.GuildId, longUserId(mates[i].userId))
+		mateName := effectiveName(mateMember)
+		values = append(values, chart.Value {
+			Value: float64(mates[i].minutes) / float64(allMatesTime),
+			Label: mateName,
+		})
+		topMatesTime += mates[i].minutes
+		text += fmt.Sprintf("%v: %v (%v)\n", digitEmote(i+1), mateName, formatTime(mates[i].minutes))
+	}
+	values = append(values, chart.Value {
+		Value: float64(allMatesTime - topMatesTime) / float64(allMatesTime),
+		Label: "[Andere]",
+	})
+	pie := chart.PieChart {
+		ColorPalette: waldColorPalette,
+		Width: 1024,
+		Height: 1024,
+		Values: values,
+	}
+	buffer := bytes.NewBuffer([]byte{})
+	err := pie.Render(chart.PNG, buffer)
+	if err != nil {
+		log.Fatal("Error while creating diagram: ", err)
+	}
+	dc.ChannelFileSend(channel, "mates.png", bytes.NewReader(buffer.Bytes()))
+	dc.ChannelMessageSend(channel, text)
 }
