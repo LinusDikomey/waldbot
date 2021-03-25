@@ -321,7 +321,7 @@ func stonksHandler(args string, channel string, author *discordgo.Member) {
 
 	dates := make([]Date, 0, len(dayData))
 
-	for date, _ := range dayData {
+	for date := range dayData {
 		dates = append(dates, date)
 	}
 
@@ -351,8 +351,8 @@ func stonksHandler(args string, channel string, author *discordgo.Member) {
 			yValues = append(yValues, float64(allTimeMinutes))
 		}
 	}
-	if len(xValues) == 0 {
-		dc.ChannelMessageSend(channel, "Keine Daten gefunden!")
+	if len(xValues) < 2 {
+		dc.ChannelMessageSend(channel, "Nicht genug Daten gefunden!")
 		return
 	}
 	graph := chart.Chart{
@@ -367,7 +367,7 @@ func stonksHandler(args string, channel string, author *discordgo.Member) {
 			},
 		},
 		ColorPalette: waldColorPalette,
-		Title:        "Stonks von " + effectiveName(author),
+		Title:        "Stonks von " + effectiveName(member),
 		XAxis: chart.XAxis{
 			Name:           "Datum",
 			ValueFormatter: chart.TimeDateValueFormatter,

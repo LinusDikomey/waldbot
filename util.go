@@ -91,13 +91,16 @@ func stringWidth(font *truetype.Font, str string) int {
 func parseMember(str string) *discordgo.Member {
 	members, _ := dc.GuildMembers(config.GuildId, "0", 1000)
 	for _, member := range(members) {
-		if strings.ToLower(member.Nick) == strings.ToLower(str) {
-			return member
-		} 
-		if strings.ToLower(member.User.Username) == strings.ToLower(str) {
+		if member.Nick == str ||
+		   member.User.Username == str ||
+		   member.User.Username + "#" + member.User.Discriminator == str {
 			return member
 		}
-		if strings.ToLower(member.User.Username + "#" + member.User.Discriminator) == strings.ToLower(str) {
+	}
+	for _, member := range(members) {
+		if strings.ToLower(member.Nick) == strings.ToLower(str) ||
+		   strings.ToLower(member.User.Username) == strings.ToLower(str) ||
+		   strings.ToLower(member.User.Username + "#" + member.User.Discriminator) == strings.ToLower(str) {
 			return member
 		}
 	}
