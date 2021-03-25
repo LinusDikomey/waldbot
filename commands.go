@@ -40,7 +40,7 @@ var commandDescriptions = [...]Command{
 	{prefix: "session", description: "Zeigt deine aktuelle Voicechat-Session"},
 	{prefix: "mate {Nutzer}", description: "Zeigt deine Zeit mit einem Nutzer an"},
 	{prefix: "mates", description: "Zeigt ein Tortendiagramm der Sprachchatzeit mit anderen Nutzern"},
-	{prefix: "stonks", description: "GME TO THE MOON"},
+	{prefix: "stonks {optional: Nutzer/Zeitfenster}", description: "GME TO THE MOON"},
 }
 
 func pingCommand(content string, channel string, author *discordgo.Member) {
@@ -312,7 +312,13 @@ func matesHandler(args string, channel string, author *discordgo.Member) {
 }
 
 func stonksHandler(args string, channel string, author *discordgo.Member) {
-	authorId := shortUserId(author.User.ID)
+	ok, dateCondition, member := parseUserOrTime(args, channel, author)
+	if !ok {
+		return
+	} // error messages handled by util function, just return
+
+	memberId := shortUserId(member.User.ID)
+
 	dates := make([]Date, 0, len(dayData))
 
 	for date, _ := range dayData {
@@ -329,10 +335,11 @@ func stonksHandler(args string, channel string, author *discordgo.Member) {
 	var yValues []float64
 	var allTimeMinutes uint32
 	for _, date := range dates {
+		if !dateCondition(date) { continue }
 		var minutes uint32
 		for _, channel := range dayData[date].channels {
 			for _, session := range channel {
-				if session.userID == authorId {
+				if session.userID == memberId {
 					minutes += uint32(session.minutes)
 				}
 			}
