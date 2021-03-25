@@ -6,16 +6,16 @@ import (
 	"log"
 	"math"
 	"sort"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/wcharczuk/go-chart/v2"
 )
 
-
 type Command struct {
-	prefix  string
-	handler func(args string, channel string, author *discordgo.Member)
-	description	string
+	prefix      string
+	handler     func(args string, channel string, author *discordgo.Member)
+	description string
 }
 
 var commands = [...]Command{
@@ -27,6 +27,7 @@ var commands = [...]Command{
 	{prefix: "session", handler: sessionHandler},
 	{prefix: "mate", handler: mateHandler},
 	{prefix: "mates", handler: matesHandler},
+	{prefix: "stonks", handler: stonksHandler},
 }
 
 // this is stupid but it looks like it has to be done to avoid initialization cycle errors
@@ -39,6 +40,7 @@ var commandDescriptions = [...]Command{
 	{prefix: "session", description: "Zeigt deine aktuelle Voicechat-Session"},
 	{prefix: "mate {Nutzer}", description: "Zeigt deine Zeit mit einem Nutzer an"},
 	{prefix: "mates", description: "Zeigt ein Tortendiagramm der Sprachchatzeit mit anderen Nutzern"},
+	{prefix: "stonks", description: "GME TO THE MOON"},
 }
 
 func pingCommand(content string, channel string, author *discordgo.Member) {
@@ -47,7 +49,7 @@ func pingCommand(content string, channel string, author *discordgo.Member) {
 
 func helpCommand(content string, channel string, author *discordgo.Member) {
 	text := "**Liste aller Befehle:**\n"
-	for _, command := range(commandDescriptions) {
+	for _, command := range commandDescriptions {
 		text += "**!" + command.prefix + "**: " + command.description + "\n"
 	}
 	dc.ChannelMessageSend(channel, text)
@@ -57,11 +59,13 @@ func timeCommand(args string, channel string, author *discordgo.Member) {
 	//authorId := shortUserId(author.User.ID)
 
 	ok, dateCondition, member := parseUserOrTime(args, channel, author)
-	if !ok { return	} // error messages handled by util function, just return
+	if !ok {
+		return
+	} // error messages handled by util function, just return
 
 	id := shortUserId(member.User.ID)
 	minutes, _ := calculateUserMinutes(dateCondition, dateCondition(currentDay))
-	for i, user := range(minutes) {
+	for i, user := range minutes {
 		if user.userId == id {
 			// rank and time
 			rankString := "Rang #" + fmt.Sprint(i+1) + " mit " + formatTime(user.minutes)
@@ -74,20 +78,21 @@ func timeCommand(args string, channel string, author *discordgo.Member) {
 			type ChannelMinutes struct {
 				channel int16
 				minutes uint32
-
 			}
 
 			// top channels
 			channels := make([]ChannelMinutes, 0, len(user.channels))
 			for channel, minutes := range user.channels {
-				channels = append(channels, ChannelMinutes{channel: channel, minutes: minutes })
+				channels = append(channels, ChannelMinutes{channel: channel, minutes: minutes})
 			}
-			sort.Slice(channels, 
-				func (n, n1 int) bool {
+			sort.Slice(channels,
+				func(n, n1 int) bool {
 					return channels[n].minutes > channels[n1].minutes
 				})
 			for i := 0; i < 9; i++ {
-				if i >= len(channels) { break }
+				if i >= len(channels) {
+					break
+				}
 				channel, err := dc.Channel(longChannelId(channels[i].channel))
 				name := "[Gelöschter Kanal]"
 				if err == nil {
@@ -99,7 +104,7 @@ func timeCommand(args string, channel string, author *discordgo.Member) {
 			return
 		}
 	}
-	dc.ChannelMessageSend(channel, "Keine aufgezeichnete Sprachzeit für den Nutzer " + effectiveName(member) + " gefunden")
+	dc.ChannelMessageSend(channel, "Keine aufgezeichnete Sprachzeit für den Nutzer "+effectiveName(member)+" gefunden")
 }
 
 func hoursCommand(args string, channel string, author *discordgo.Member) {
@@ -110,13 +115,15 @@ func hoursCommand(args string, channel string, author *discordgo.Member) {
 			return b
 		}
 	}
-	
+
 	ok, dateCondition, member := parseUserOrTime(args, channel, author)
-	if !ok { return	} // error messages handled by util function, just return
+	if !ok {
+		return
+	} // error messages handled by util function, just return
 
 	const SECTION_SIZE = 5
 	const SECTIONS = (24 * 60) / SECTION_SIZE
-	
+
 	shortUser := shortUserId(member.User.ID)
 	minutesSum := uint32(0)
 	minutesBySections := make([]uint32, SECTIONS)
@@ -140,7 +147,7 @@ func hoursCommand(args string, channel string, author *discordgo.Member) {
 					if section >= SECTIONS {
 						section = SECTIONS - 1
 					}
-					minutesLeftInSection := min(remaining, SECTION_SIZE - (currentMinute % SECTION_SIZE))
+					minutesLeftInSection := min(remaining, SECTION_SIZE-(currentMinute%SECTION_SIZE))
 					minutesBySections[section] += uint32(minutesLeftInSection)
 					minutesSum += uint32(minutesLeftInSection)
 					currentMinute += minutesLeftInSection
@@ -155,10 +162,9 @@ func hoursCommand(args string, channel string, author *discordgo.Member) {
 		return
 	}
 
-
 	xAxis := make([]float64, SECTIONS)
 	yAxis := make([]float64, SECTIONS)
-	
+
 	maxMinutesPerSection := float64(SECTION_SIZE * dayCount)
 
 	maxY := float64(0)
@@ -169,7 +175,7 @@ func hoursCommand(args string, channel string, author *discordgo.Member) {
 		maxY = math.Max(maxY, value)
 		yAxis[i] = value
 	}
-	
+
 	dc.ChannelFileSend(channel, "diagram.png", bytes.NewReader(
 		dayTimeChart(
 			fmt.Sprintf("Sprachchat-Zeitverteilung von '%v'", effectiveName(member)),
@@ -181,15 +187,18 @@ func hoursCommand(args string, channel string, author *discordgo.Member) {
 
 func channelsCommand(args string, channel string, author *discordgo.Member) {
 	ok, dateCondition, member := parseUserOrTime(args, channel, author)
-	if !ok { return	} // error messages handled by util function, just return
+	if !ok {
+		return
+	} // error messages handled by util function, just return
 
 	shortUser := shortUserId(member.User.ID)
-	
+
 	stats, _ := calculateUserMinutes(dateCondition, dateCondition(currentDay))
 
-
 	for _, userStats := range stats {
-		if userStats.userId != shortUser { continue }
+		if userStats.userId != shortUser {
+			continue
+		}
 
 		values := make([]chart.Value, len(userStats.channels))
 		for id, minutes := range userStats.channels {
@@ -202,17 +211,17 @@ func channelsCommand(args string, channel string, author *discordgo.Member) {
 			} else {
 				name = ""
 			}
-			
-			values = append(values, chart.Value {
+
+			values = append(values, chart.Value{
 				Value: float64(minutes),
 				Label: name,
 			})
 		}
-		pie := chart.PieChart {
+		pie := chart.PieChart{
 			ColorPalette: waldColorPalette,
-			Width: 1024,
-			Height: 1024,
-			Values: values,
+			Width:        1024,
+			Height:       1024,
+			Values:       values,
 		}
 		buffer := bytes.NewBuffer([]byte{})
 		err := pie.Render(chart.PNG, buffer)
@@ -263,12 +272,12 @@ func matesHandler(args string, channel string, author *discordgo.Member) {
 	authorId := shortUserId(author.User.ID)
 	mates, allMatesTime := timeWithMates(authorId, dateAllTimeCondition)
 	text := author.Mention() + ", deine Top-Freunde sind:\n"
-	values := []chart.Value {}
+	values := []chart.Value{}
 	topMatesTime := uint32(0)
 	listCount := matesToShow
 	if len(mates) < matesToShow {
 		if len(mates) == 0 {
-			dc.ChannelMessageSend(channel, "Du hast keine Freunde " + author.Mention() + " :cry:")
+			dc.ChannelMessageSend(channel, "Du hast keine Freunde "+author.Mention()+" :cry:")
 			return
 		}
 		listCount = len(mates)
@@ -276,22 +285,22 @@ func matesHandler(args string, channel string, author *discordgo.Member) {
 	for i := 0; i < listCount; i++ {
 		mateMember, _ := dc.State.Member(config.GuildId, longUserId(mates[i].userId))
 		mateName := effectiveName(mateMember)
-		values = append(values, chart.Value {
+		values = append(values, chart.Value{
 			Value: float64(mates[i].minutes) / float64(allMatesTime),
 			Label: mateName,
 		})
 		topMatesTime += mates[i].minutes
 		text += fmt.Sprintf("%v: %v (%v)\n", digitEmote(i+1), mateName, formatTime(mates[i].minutes))
 	}
-	values = append(values, chart.Value {
-		Value: float64(allMatesTime - topMatesTime) / float64(allMatesTime),
+	values = append(values, chart.Value{
+		Value: float64(allMatesTime-topMatesTime) / float64(allMatesTime),
 		Label: "[Andere]",
 	})
-	pie := chart.PieChart {
+	pie := chart.PieChart{
 		ColorPalette: waldColorPalette,
-		Width: 1024,
-		Height: 1024,
-		Values: values,
+		Width:        1024,
+		Height:       1024,
+		Values:       values,
 	}
 	buffer := bytes.NewBuffer([]byte{})
 	err := pie.Render(chart.PNG, buffer)
@@ -300,4 +309,82 @@ func matesHandler(args string, channel string, author *discordgo.Member) {
 	}
 	dc.ChannelFileSend(channel, "mates.png", bytes.NewReader(buffer.Bytes()))
 	dc.ChannelMessageSend(channel, text)
+}
+
+func stonksHandler(args string, channel string, author *discordgo.Member) {
+	authorId := shortUserId(author.User.ID)
+	dates := make([]Date, 0, len(dayData))
+
+	for date, _ := range dayData {
+		dates = append(dates, date)
+	}
+
+	sort.Slice(dates, func(i, j int) bool {
+		return dateIsSmaller(dates[i], dates[j])
+	})
+
+	starting := true
+
+	var xValues []time.Time
+	var yValues []float64
+	var allTimeMinutes uint32
+	for _, date := range dates {
+		var minutes uint32
+		for _, channel := range dayData[date].channels {
+			for _, session := range channel {
+				if session.userID == authorId {
+					minutes += uint32(session.minutes)
+				}
+			}
+		}
+		if minutes > 0 || !starting {
+			starting = false
+			allTimeMinutes += minutes
+			xValues = append(xValues, time.Date(int(date.year), time.Month(date.month), int(date.day), 0, 0, 0, 0, time.Local))
+			yValues = append(yValues, float64(allTimeMinutes))
+		}
+	}
+	if len(xValues) == 0 {
+		dc.ChannelMessageSend(channel, "Keine Daten gefunden!")
+		return
+	}
+	graph := chart.Chart{
+		Width:  1280,
+		Height: 720,
+		Background: chart.Style{
+			Padding: chart.Box{
+				Top:    80,
+				Left:   10,
+				Right:  10,
+				Bottom: 10,
+			},
+		},
+		ColorPalette: waldColorPalette,
+		Title:        "Stonks von " + effectiveName(author),
+		XAxis: chart.XAxis{
+			Name:           "Datum",
+			ValueFormatter: chart.TimeDateValueFormatter,
+		},
+		YAxis: chart.YAxis{
+			Name: "Stunden",
+			ValueFormatter: func(v interface{}) string {
+				if typed, isTyped := v.(float64); isTyped {
+					return formatTime(uint32(typed))
+				}
+				return "error"
+			},
+		},
+		Series: []chart.Series{
+			chart.TimeSeries{
+				XValues: xValues,
+				YValues: yValues,
+			},
+		},
+	}
+	buffer := bytes.NewBuffer([]byte{})
+	err := graph.Render(chart.PNG, buffer)
+	if err != nil {
+		log.Fatal("Error while creating diagram: ", err)
+	}
+	dc.ChannelFileSend(channel, "stonks.png", bytes.NewReader(buffer.Bytes()))
 }

@@ -11,20 +11,20 @@ import (
 )
 
 func dayTimeChart(title string, xValues []float64, yValues []float64, maxY float64) []byte {
-	graph := chart.Chart {
-		Width: 1280,
+	graph := chart.Chart{
+		Width:  1280,
 		Height: 720,
 		Background: chart.Style{
-			Padding: chart.Box {
-				Top: 80,
-				Left: 10,
-				Right: 10,
+			Padding: chart.Box{
+				Top:    80,
+				Left:   10,
+				Right:  10,
 				Bottom: 10,
 			},
 		},
 		ColorPalette: waldColorPalette,
-		Title: title,
-		YAxis: chart.YAxis {
+		Title:        title,
+		YAxis: chart.YAxis{
 			Name: "Prozent online",
 			Range: &chart.ContinuousRange{
 				Min: 0.0,
@@ -37,7 +37,7 @@ func dayTimeChart(title string, xValues []float64, yValues []float64, maxY float
 				return ""
 			},
 		},
-		XAxis: chart.XAxis {
+		XAxis: chart.XAxis{
 			Name: "Uhrzeit",
 			ValueFormatter: func(v interface{}) string {
 				if typed, isTyped := v.(float64); isTyped {
@@ -46,19 +46,19 @@ func dayTimeChart(title string, xValues []float64, yValues []float64, maxY float
 				return "error"
 			},
 		},
-		Series: []chart.Series {
-			chart.ContinuousSeries {
+		Series: []chart.Series{
+			chart.ContinuousSeries{
 				XValues: xValues,
 				YValues: yValues,
 			},
-			chart.AnnotationSeries {
+			chart.AnnotationSeries{
 				Name: "Cursed",
 			},
 		},
 	}
 	// fill ticks (x axis labels)
 	for i := 0; i <= 24; i++ {
-		graph.XAxis.Ticks = append(graph.XAxis.Ticks, chart.Tick{Value: float64(i * 60), Label: fmt.Sprintf("%v:00", i)})	
+		graph.XAxis.Ticks = append(graph.XAxis.Ticks, chart.Tick{Value: float64(i * 60), Label: fmt.Sprintf("%v:00", i)})
 	}
 
 	/*for i, xVal := range(xValues) {
@@ -79,8 +79,8 @@ func dayTimeChart(title string, xValues []float64, yValues []float64, maxY float
 	return buffer.Bytes()
 }
 
-
 var waldColorPalette WaldColorPalette
+
 type WaldColorPalette struct{}
 
 func (dp WaldColorPalette) BackgroundColor() drawing.Color {
