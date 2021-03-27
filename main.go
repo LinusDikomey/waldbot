@@ -165,13 +165,14 @@ func minuteUpdate() {
 		if state != nil && !state.Mute && !state.SelfMute && !state.Deaf && !state.SelfDeaf {
 			// user is active in a voice chat
 			
-			if active, ok := sessions[shortID]; ok {
-				// existing session
+			currentChannelId := shortChannelId(state.ChannelID)
+			if active, ok := sessions[shortID]; ok && active.channelID == currentChannelId {
+				// continue existing session
 				active.session.minutes++
 				sessions[shortID] = active
 			} else {
 				//new session
-				shortChannelID := shortChannelId(state.ChannelID)
+				shortChannelID := currentChannelId
 				sessions[shortID] = ActiveSession{session: VoiceSession{ dayMinute: dayMinute, userID: shortID, minutes: 1 }, channelID: shortChannelID}
 			}
 		} else {
