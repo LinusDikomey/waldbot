@@ -33,7 +33,8 @@ jobs:
         FTP_SERVER: ${{ secrets.FTP_SERVER }}
         FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-        LOCAL_DIR: ../../opt/waldbot/
+        LOCAL_DIR: build
+        SERVER_DIR: /opt/waldbot/
         METHOD: sftp
         PORT: 22
         ARGS: --delete
