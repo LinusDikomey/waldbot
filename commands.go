@@ -60,7 +60,7 @@ func helpCommand(content string, channel string, author *discordgo.Member) {
 func timeCommand(args string, channel string, author *discordgo.Member) {
 	//authorId := shortUserId(author.User.ID)
 
-	ok, dateCondition, member := parseUserOrTime(args, channel, author)
+	ok, dateCondition, member := parseMemberOrDateCondition(args, channel, author)
 	if !ok {
 		return
 	} // error messages handled by util function, just return
@@ -118,7 +118,7 @@ func hoursCommand(args string, channel string, author *discordgo.Member) {
 		}
 	}
 
-	ok, dateCondition, member := parseUserOrTime(args, channel, author)
+	ok, dateCondition, member := parseMemberOrDateCondition(args, channel, author)
 	if !ok {
 		return
 	} // error messages handled by util function, just return
@@ -188,7 +188,7 @@ func hoursCommand(args string, channel string, author *discordgo.Member) {
 }
 
 func channelsCommand(args string, channel string, author *discordgo.Member) {
-	ok, dateCondition, member := parseUserOrTime(args, channel, author)
+	ok, dateCondition, member := parseMemberOrDateCondition(args, channel, author)
 	if !ok {
 		return
 	} // error messages handled by util function, just return
@@ -314,7 +314,7 @@ func matesHandler(args string, channel string, author *discordgo.Member) {
 }
 
 func stonksHandler(args string, channel string, author *discordgo.Member) {
-	ok, dateCondition, member := parseUserOrTime(args, channel, author)
+	ok, dateCondition, member := parseMemberOrDateCondition(args, channel, author)
 	if !ok {
 		return
 	} // error messages handled by util function, just return
@@ -401,7 +401,7 @@ func stonksHandler(args string, channel string, author *discordgo.Member) {
 }
 
 func userCountHandler(args string, channel string, author *discordgo.Member) {
-	ok, dateCondition, member := parseUserOrTime(args, channel, author)
+	ok, dateCondition, member := parseMemberOrDateCondition(args, channel, author)
 	if !ok {
 		return
 	} // error messages handled by util function, just return
@@ -415,8 +415,6 @@ func userCountHandler(args string, channel string, author *discordgo.Member) {
 	sort.Slice(dates, func(i, j int) bool {
 		return dateIsSmaller(dates[i], dates[j])
 	})
-
-	starting := true
 
 	var xValues []time.Time
 	var yValues []float64
@@ -434,11 +432,8 @@ func userCountHandler(args string, channel string, author *discordgo.Member) {
 				}
 			}
 		}
-		if len(users) > 0 || !starting {
-			starting = false
-			xValues = append(xValues, time.Date(int(date.year), time.Month(date.month), int(date.day), 0, 0, 0, 0, time.Local))
-			yValues = append(yValues, float64(len(users)))
-		}
+		xValues = append(xValues, time.Date(int(date.year), time.Month(date.month), int(date.day), 0, 0, 0, 0, time.Local))
+		yValues = append(yValues, float64(len(users)))
 	}
 	if len(xValues) < 2 {
 		dc.ChannelMessageSend(channel, "Nicht genug Daten gefunden!")

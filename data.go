@@ -18,6 +18,8 @@ type Data struct {
 
 	ShortChannelId map[string]int16
 	NextChannelId  int16
+
+	DynamicChannels map[string][]string
 }
 
 var (

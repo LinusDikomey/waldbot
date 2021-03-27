@@ -13,6 +13,12 @@ type Config struct {
 	StatsChannelId string	`yaml:"statsChannelId"`
 	CertFile string			`yaml:"certFile"`
 	KeyFile string			`yaml:"keyFile"`
+	DynamicChannels struct {
+		Parent string
+		Position int
+		Bitrate int
+		Channels []string
+	}
 }
 
 var config Config = Config {}

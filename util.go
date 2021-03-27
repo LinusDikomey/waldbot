@@ -89,6 +89,9 @@ func stringWidth(font *truetype.Font, str string) int {
 }
 
 func parseMember(str string) *discordgo.Member {
+	if str == "" {
+		return nil
+	}
 	members, _ := dc.GuildMembers(config.GuildId, "0", 1000)
 	for _, member := range(members) {
 		if member.Nick == str ||
@@ -125,31 +128,39 @@ func parseDate(str string) *Date {
 	return &date
 }
 
-func parseUserOrTime(args string, channel string, member *discordgo.Member) (bool, func(Date) bool, *discordgo.Member) {
-	dateCondition := dateAllTimeCondition
+const (
+	parseSuccess = iota
+	parseInvalid = iota
+	parseNone = iota
+)
+
+// Tries to parse the args string as any date range. 
+// Will always return back the default condition and wether it successfully parsed a date
+func parseDateCondition(args string, defaultCondition DateCondition) (DateCondition, uint8) {
+	condition := defaultCondition
 	if args != "" {
 		if args == "daily" {
-			dateCondition = dateDailyCondition
+			return dateDailyCondition, parseSuccess
 		} else if args == "weekly" {
-			dateCondition = dateWeeklyCondition
+			return dateWeeklyCondition, parseSuccess
 		} else if args == "monthly" {
-			dateCondition = dateMonthlyCondition
+			return dateMonthlyCondition, parseSuccess
 		} else if args == "yearly" {
-			dateCondition = dateYearlyCondition
+			return dateYearlyCondition, parseSuccess
 		} else {
 			dateRangeSplit := strings.Split(args, "-")
+			dateCount := len(dateRangeSplit)
 			isDate := false
-			if len(dateRangeSplit) == 1 || len(dateRangeSplit) == 2 {
+			if dateCount == 1 || dateCount == 2 {
 				startDate := parseDate(dateRangeSplit[0])
 				endDate := startDate
 				
 				if len(strings.Split(dateRangeSplit[0], ".")) == 3 {
-					if len(dateRangeSplit) == 2 && len(strings.Split(dateRangeSplit[1], ".")) == 3 {
+					if dateCount == 2 && len(strings.Split(dateRangeSplit[1], ".")) == 3 {
 						endDate = parseDate(dateRangeSplit[1])
 					}
 					if startDate == nil || endDate == nil {
-						dc.ChannelMessageSend(channel, "Invalides Datum angegeben!")
-						return false, nil, nil
+						return condition, parseInvalid
 					}
 
 					isDate = true
@@ -160,8 +171,7 @@ func parseUserOrTime(args string, channel string, member *discordgo.Member) (boo
 					year, err2 := strconv.Atoi(split[1])
 					if err1 == nil || err2 == nil {
 						if month < 1 || month > 12 || year < 0 || year > 65000 {
-							dc.ChannelMessageSend(channel, "Invalides Datum angegeben!")
-							return false, nil, nil
+							return condition, parseInvalid
 						}
 						startDate = &Date {day: 1, month: uint8(month), year: uint16(year)}
 						endDate = &Date {day: 31, month: uint8(month), year: uint16(year)}
@@ -169,19 +179,36 @@ func parseUserOrTime(args string, channel string, member *discordgo.Member) (boo
 					}
 				}
 				if isDate {
-					dateCondition = func(day Date) bool {
+					condition = func(day Date) bool {
 						return !dateIsSmaller(day, *startDate) && !dateIsSmaller(*endDate, day)
 					}
+					return condition, parseSuccess
+				} else {
+					return condition, parseNone
 				}
+			} else {
+				return condition, parseNone
 			}
-			if !isDate {
-				member = parseMember(args)
-				if member == nil {
-					dc.ChannelMessageSend(channel, "Der angegebene Nutzer wurde nicht gefunden!")
-					return false, nil, nil
-				}
+		}
+	} else {
+		return condition, parseNone
+	}
+}
+
+func parseMemberOrDateCondition(args string, channel string, member *discordgo.Member) (bool, func(Date) bool, *discordgo.Member) {
+	condition, success := parseDateCondition(args, dateAllTimeCondition)
+	if success == parseInvalid {
+		dc.ChannelMessageSend(channel, "Invalides Datum angegeben!")
+		return false, nil, nil
+	}
+	if args != "" {	
+		if success == parseNone {
+			member = parseMember(args)
+			if member == nil {
+				dc.ChannelMessageSend(channel, "Der angegebene Nutzer wurde nicht gefunden!")
+				return false, nil, nil
 			}
 		}
 	}
-	return true, dateCondition, member
+	return true, condition, member
 }

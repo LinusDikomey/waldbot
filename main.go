@@ -61,6 +61,8 @@ func main() {
 	}
 
 	dc.AddHandler(onMessageCreate)
+	dc.AddHandler(onChannelConnect)
+	dc.AddHandler(onChannelDisconnect)
 
 	dc.Identify.Intents = discordgo.IntentsAll
 	dc.StateEnabled = true
