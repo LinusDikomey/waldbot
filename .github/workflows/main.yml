@@ -35,5 +35,4 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./build/
         server-dir: opt/waldbot/
-        protocol: sftp
         port: 22
