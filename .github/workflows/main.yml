@@ -34,6 +34,14 @@ jobs:
         FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         LOCAL_DIR: ./build/
-        REMOTE_DIR: opt/waldbot/
+        REMOTE_DIR: /opt/waldbot/
         METHOD: sftp
         PORT: 22
+    - name: Restart Bot
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        port: 22
+        script: systemctl restart waldbot
