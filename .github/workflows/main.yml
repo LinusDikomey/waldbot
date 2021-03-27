@@ -28,11 +28,20 @@ jobs:
       run: go build -o ./build/waldbot
     
     - name: FTP-Deploy-Action
-      uses: SamKirkland/FTP-Deploy-Action@4.0.0
+      uses: SamKirkland/FTP-Deploy-Action@2.0.0
+      env:
+        FTP_SERVER: ${{ secrets.FTP_SERVER }}
+        FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+        FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        LOCAL_DIR: ./build/
+        REMOTE_DIR: /opt/waldbot/
+        METHOD: sftp
+        PORT: 22
+    - name: Restart Bot
+      uses: appleboy/ssh-action@master
       with:
-        server: ${{ secrets.FTP_SERVER }}
+        host: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./build/
-        server-dir: opt/waldbot/
         port: 22
+        script: systemctl restart waldbot
