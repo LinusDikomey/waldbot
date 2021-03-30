@@ -147,6 +147,8 @@ func parseDateCondition(args string, defaultCondition DateCondition) (DateCondit
 			return dateMonthlyCondition, parseSuccess
 		} else if args == "yearly" {
 			return dateYearlyCondition, parseSuccess
+		} else if args == "all" || args == "allTime" {
+			return dateAllTimeCondition, parseSuccess	
 		} else {
 			dateRangeSplit := strings.Split(args, "-")
 			dateCount := len(dateRangeSplit)

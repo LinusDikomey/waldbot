@@ -150,7 +150,7 @@ func timeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	dateCondition, success := parseDateCondition(time, dateAllTimeCondition)
 
 	var response string
-	if success == parseInvalid {
+	if time != "" && success != parseSuccess {
 		response = "Invaliden Zeitraum angegeben"
 	} else {
 		response = timeCommandResponse(member, dateCondition, member == i.Member)
