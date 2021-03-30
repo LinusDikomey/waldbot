@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -144,18 +145,32 @@ func timeCommandResponse(member *discordgo.Member, dateCondition DateCondition, 
 func timeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	time := ""
 	member := i.Member
+
 	if len(i.Data.Options) >= 1 { time = i.Data.Options[0].StringValue() }
 	if len(i.Data.Options) >= 2 { member = MemberValue(i.Data.Options[1]) }
 
-	dateCondition, success := parseDateCondition(time, dateAllTimeCondition)
-
+	dateCondition := dateAllTimeCondition
 	var response string
-	if time != "" && success != parseSuccess {
-		response = "Invaliden Zeitraum angegeben"
-	} else {
+	// try to parse time as user in case time argument was left out
+	if _, err := strconv.ParseInt(time, 10, 64); err == nil && len(i.Data.Options) == 1 {
+		if found, err := dc.State.Member(config.GuildId, time); err == nil {
+			member = found
+		} else {
+			response = "Invalides Zeitargument"
+		}
+	} else if time != "" {
+		parsedDateCondition, success := parseDateCondition(time, dateAllTimeCondition)
+		if success != parseSuccess {
+			response = "Invaliden Zeitraum angegeben"
+		} else {
+			dateCondition = parsedDateCondition
+		}
+	}
+	// no error response
+	if response == "" {
 		response = timeCommandResponse(member, dateCondition, member == i.Member)
 	}
-
+	
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionApplicationCommandResponseData{
@@ -165,8 +180,6 @@ func timeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func timeCommand(args string, channel string, author *discordgo.Member) {
-	//authorId := shortUserId(author.User.ID)
-
 	ok, dateCondition, member := parseMemberOrDateCondition(args, channel, author)
 	if !ok {
 		return
