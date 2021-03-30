@@ -47,20 +47,6 @@ func main() {
 	if err != nil {
 		fmt.Println("Error while starting discord session, ", err)
 	}
-	
-	//slash commands
-	dc.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if h, ok := commandHandlers[i.Data.Name]; ok {
-			h(s, i)
-		}
-	})
-	for _, v := range slashCommands {
-		_, err := dc.ApplicationCommandCreate(dc.State.User.ID, config.GuildId, v)
-		if err != nil {
-			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
-		}
-	}
-
 
 	// other handlers
 	dc.AddHandler(onMessageCreate)
@@ -76,6 +62,20 @@ func main() {
 		fmt.Println("error opening connection,", err)
 		return
 	}
+
+	// setup slash commands
+	dc.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		if h, ok := commandHandlers[i.Data.Name]; ok {
+			h(s, i)
+		}
+	})
+	for _, v := range slashCommands {
+		_, err := dc.ApplicationCommandCreate(dc.State.User.ID, config.GuildId, v)
+		if err != nil {
+			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
+		}
+	}
+
 	guild, err = dc.Guild(config.GuildId)
 
 	if err != nil {
