@@ -12,6 +12,20 @@ import (
 	"github.com/wcharczuk/go-chart/v2"
 )
 
+func MemberValue(o *discordgo.ApplicationCommandInteractionDataOption) *discordgo.Member {
+	userID := o.StringValue()
+	if userID == "" {
+		return nil
+	}
+
+	m, err := dc.State.Member(config.GuildId, userID)
+	if err != nil {
+		return nil
+	}
+
+	return m
+}
+
 type Command struct {
 	prefix      string
 	handler     func(args string, channel string, author *discordgo.Member)
@@ -21,22 +35,26 @@ type Command struct {
 var (
 	slashCommands = []*discordgo.ApplicationCommand {
 		{
-			Name: "basic-command",
-			// All commands and options must have an description
-			// Commands/options without description will fail the registration
-			// of the command.
-			Description: "Basic command",
+			Name: "time",
+			Description: "Zeigt Sprachchatzeit, Rang und Lieblingskanäle an",
+			Options: []*discordgo.ApplicationCommandOption {
+				{
+					Type: discordgo.ApplicationCommandOptionString,
+					Name: "Zeitraum",
+					Description: "Zeitraum, in dem die Sprachchatzeit angezeigt werden soll, z.B. daily', 'weekly', '1.2.2021', '15.4.2020-17.6.2020'",
+					Required: false,
+				},
+				{
+					Type: discordgo.ApplicationCommandOptionUser,
+					Name: "Nutzer",
+					Description: "Nutzer, dessen Zeit angezeigt werden soll",
+					Required: false,
+				},
+			},
 		},
 	}
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"basic-command": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionApplicationCommandResponseData{
-					Content: "Hey there! Congratulations, you just executed your first slash command",
-				},
-			})
-		},
+		"time": timeHandler,
 	}
 )
 
@@ -79,21 +97,14 @@ func helpCommand(content string, channel string, author *discordgo.Member) {
 	dc.ChannelMessageSend(channel, text)
 }
 
-func timeCommand(args string, channel string, author *discordgo.Member) {
-	//authorId := shortUserId(author.User.ID)
-
-	ok, dateCondition, member := parseMemberOrDateCondition(args, channel, author)
-	if !ok {
-		return
-	} // error messages handled by util function, just return
-
+func timeCommandResponse(member *discordgo.Member, dateCondition DateCondition, self bool) string {
 	id := shortUserId(member.User.ID)
 	minutes, _ := calculateUserMinutes(dateCondition, dateCondition(currentDay))
 	for i, user := range minutes {
 		if user.userId == id {
 			// rank and time
 			rankString := "Rang #" + fmt.Sprint(i+1) + " mit " + formatTime(user.minutes)
-			if member == author {
+			if self {
 				rankString = (*member).Mention() + ", du bist " + rankString
 			} else {
 				rankString = effectiveName(member) + " ist " + rankString
@@ -124,11 +135,44 @@ func timeCommand(args string, channel string, author *discordgo.Member) {
 				}
 				rankString += "\n" + digitEmote(i+1) + ": " + name + ": " + formatTime(channels[i].minutes)
 			}
-			dc.ChannelMessageSend(channel, rankString)
-			return
+			return rankString
 		}
 	}
-	dc.ChannelMessageSend(channel, "Keine aufgezeichnete Sprachzeit für den Nutzer "+effectiveName(member)+" gefunden")
+	return "Keine aufgezeichnete Sprachzeit für den Nutzer "+effectiveName(member) + " gefunden"
+}
+
+func timeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	time := ""
+	member := i.Member
+	if len(i.Data.Options) >= 1 { time = i.Data.Options[0].StringValue() }
+	if len(i.Data.Options) >= 2 { member = MemberValue(i.Data.Options[1]) }
+
+	dateCondition, success := parseDateCondition(time, dateAllTimeCondition)
+
+	var response string
+	if success == parseInvalid {
+		response = "Invaliden Zeitraum angegeben"
+	} else {
+		response = timeCommandResponse(member, dateCondition, member == i.Member)
+	}
+
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionApplicationCommandResponseData{
+			Content: response,
+		},
+	})
+}
+
+func timeCommand(args string, channel string, author *discordgo.Member) {
+	//authorId := shortUserId(author.User.ID)
+
+	ok, dateCondition, member := parseMemberOrDateCondition(args, channel, author)
+	if !ok {
+		return
+	} // error messages handled by util function, just return
+
+	dc.ChannelMessageSend(channel, timeCommandResponse(member, dateCondition, member == author))
 }
 
 func hoursCommand(args string, channel string, author *discordgo.Member) {
