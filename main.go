@@ -14,18 +14,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-/*var (
-	commands = []*discordgo.ApplicationCommand {
-		{
-			Name: "basic-command",
-			// All commands and options must have an description
-			// Commands/options without description will fail the registration
-			// of the command.
-			Description: "Basic command",
-		},
-	}
-)*/
-
 type ActiveSession struct {
 	session VoiceSession
 	channelID ChannelId
@@ -59,7 +47,22 @@ func main() {
 	if err != nil {
 		fmt.Println("Error while starting discord session, ", err)
 	}
+	
+	//slash commands
+	dc.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		if h, ok := commandHandlers[i.Data.Name]; ok {
+			h(s, i)
+		}
+	})
+	for _, v := range slashCommands {
+		_, err := dc.ApplicationCommandCreate(dc.State.User.ID, config.GuildId, v)
+		if err != nil {
+			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
+		}
+	}
 
+
+	// other handlers
 	dc.AddHandler(onMessageCreate)
 	dc.AddHandler(onChannelConnect)
 	dc.AddHandler(onChannelDisconnect)
@@ -162,7 +165,7 @@ func minuteUpdate() {
 		if member.User.Bot { continue }
 		state, _ := dc.State.VoiceState(config.GuildId, member.User.ID)
 		shortID := shortUserId(member.User.ID)
-		if state != nil && !state.Mute && !state.SelfMute && !state.Deaf && !state.SelfDeaf {
+		if state != nil && !state.Mute && !state.SelfMute && !state.Deaf && !state.SelfDeaf && !state.Suppress {
 			// user is active in a voice chat
 			
 			currentChannelId := shortChannelId(state.ChannelID)

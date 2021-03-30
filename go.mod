@@ -3,7 +3,7 @@ module github.com/LinusDikomey/waldbot
 go 1.16
 
 require (
-	github.com/bwmarrin/discordgo v0.23.2
+	github.com/bwmarrin/discordgo v0.23.3-0.20210327033043-f637c37ba2f0
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/wcharczuk/go-chart/v2 v2.1.0
 	golang.org/x/image v0.0.0-20210220032944-ac19c3e999fb // indirect
