@@ -41,7 +41,7 @@ var (
 				{
 					Type: discordgo.ApplicationCommandOptionString,
 					Name: "Zeitraum",
-					Description: "Zeitraum, in dem die Sprachchatzeit angezeigt werden soll, z.B. daily', 'weekly', '1.2.2021', '15.4.2020-17.6.2020'",
+					Description: "z.B. daily', 'weekly', '1.2.2021', '15.4.2020-17.6.2020'",
 					Required: false,
 				},
 				{
