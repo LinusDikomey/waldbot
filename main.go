@@ -48,11 +48,15 @@ func main() {
 		fmt.Println("Error while starting discord session, ", err)
 	}
 
-	// other handlers
+	// handlers
 	dc.AddHandler(onMessageCreate)
 	dc.AddHandler(onChannelConnect)
 	dc.AddHandler(onChannelDisconnect)
-
+	dc.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		if h, ok := commandHandlers[i.Data.Name]; ok {
+			h(s, i)
+		}
+	})
 	dc.Identify.Intents = discordgo.IntentsAll
 	dc.StateEnabled = true
 
@@ -63,13 +67,8 @@ func main() {
 		return
 	}
 
-	// setup slash commands
-	dc.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if h, ok := commandHandlers[i.Data.Name]; ok {
-			h(s, i)
-		}
-	})
 	for _, v := range slashCommands {
+		fmt.Println("Adding command:", v.Name, ", stateId:", dc.State.User.ID, ", guildId:", config.GuildId, ", v:", v)
 		_, err := dc.ApplicationCommandCreate(dc.State.User.ID, config.GuildId, v)
 		if err != nil {
 			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
