@@ -156,6 +156,10 @@ func minuteUpdate() {
 	}
 	dayMinute := dayMinute(currentTime)
 	
+	if dayMinute % 30 == 0 {
+		saveFiles()
+	}
+
 	members, err := dc.GuildMembers(config.GuildId, "", 1000)
 	if err != nil {
 		panic("Could not find Guild by id specified in config: " + fmt.Sprint(err))
