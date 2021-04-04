@@ -150,6 +150,7 @@ func minuteUpdate() {
 	date := dateFromTime(currentTime)
 	
 	if _, ok := dayData[date]; !ok {
+		fmt.Println("New day started!")
 		dayData[date] = Day {channels: map[int16][]VoiceSession{}}
 		dayUpdate(currentDay, date)
 		currentDay = date
@@ -172,10 +173,18 @@ func minuteUpdate() {
 			// user is active in a voice chat
 			
 			currentChannelId := shortChannelId(state.ChannelID)
-			if active, ok := sessions[shortID]; ok && active.channelID == currentChannelId {
-				// continue existing session
-				active.session.minutes++
-				sessions[shortID] = active
+			if active, ok := sessions[shortID]; ok {
+				if active.channelID == currentChannelId {
+					// continue existing session
+					active.session.minutes++
+					sessions[shortID] = active
+				} else {
+					//channel changed, finish existing and start new session
+					dayData[date].channels[active.channelID] = append(dayData[date].channels[active.channelID], active.session)
+
+					newChannelId := currentChannelId
+					sessions[shortID] = ActiveSession{session: VoiceSession{ dayMinute: dayMinute, userID: shortID, minutes: 1 }, channelID: newChannelId}		
+				}
 			} else {
 				//new session
 				shortChannelID := currentChannelId
