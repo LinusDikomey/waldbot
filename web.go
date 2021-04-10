@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -24,6 +25,7 @@ func addWebHandlers() {
 	http.HandleFunc("/api/stats", statsHandler)
 	http.HandleFunc("/api/dayactivity", dayActivityHandler)
 	http.HandleFunc("/api/yearactivity", yearActivityHandler)
+	http.HandleFunc("api/auth", authHandler)
 	go func() {
 		err := http.ListenAndServeTLS(":8080", config.CertFile, config.KeyFile, nil)
 		if err != nil {
@@ -64,4 +66,50 @@ func yearActivityHandler(w http.ResponseWriter, r *http.Request) {
 	bytes, err := json.Marshal(activity)
 	if err != nil { log.Fatal(err) }
 	w.Write(bytes)
+}
+
+func authHandler(w http.ResponseWriter, r *http.Request) {
+	type Request struct {
+		ClientId string			`json:"client_id"`
+		ClientSecret string		`json:"client_secret"`
+		Code string				`json:"code"`
+		RedirectUri string		`json:"redirect_uri"`
+		Scope string			`json:"scope"`
+	}
+
+	if r.Method != "GET" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("Method not allowed! Use GET!"))
+		return
+	}
+	params := r.URL.Query()
+	codes, ok := params["code"]
+	code := codes[0]
+	if !ok || len(code) < 1 {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad request, parameter 'code' missing!"))
+	}
+	fmt.Println("Received OAuth2 code:", code)
+	
+	data, _ := json.Marshal(Request {
+		ClientId: oauthClientId,
+		ClientSecret: oauthClientSecret,
+		Code: code,
+		RedirectUri: "wald.mbehrmann.de/auth",
+		Scope: "identify",
+	})
+	req, err := http.NewRequest("POST", "https://discord.com/api/v8/oauth2/token", bytes.NewReader(data))
+	if err != nil {
+		fmt.Println("could not create request:", err)
+		return
+	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	client := http.Client {}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error while executing auth request:", err)
+		return
+	}
+	fmt.Println("Response:", resp)
+	
 }

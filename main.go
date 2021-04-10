@@ -26,6 +26,8 @@ var (
 	currentDay Date
 	targetWidth int
 	guild *discordgo.Guild
+	oauthClientId string
+	oauthClientSecret string
 )
 
 func main() {
@@ -34,6 +36,9 @@ func main() {
 	loadConfig()
 	loadFonts()
 	targetWidth = stringWidth(boldFont, "__Osabama gone Oase") + stringWidth(normalFont, ": 10000:00h")
+
+	oauthClientId = os.Getenv("WALDBOT_CLIENTID")
+	oauthClientSecret = os.Getenv("WALDBOT_CLIENTSECRET")
 
 	readDays("./data/days/")
 	fmt.Println("")
