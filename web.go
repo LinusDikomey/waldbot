@@ -25,7 +25,7 @@ func addWebHandlers() {
 	http.HandleFunc("/api/stats", statsHandler)
 	http.HandleFunc("/api/dayactivity", dayActivityHandler)
 	http.HandleFunc("/api/yearactivity", yearActivityHandler)
-	http.HandleFunc("api/auth", authHandler)
+	http.HandleFunc("/api/auth", authHandler)
 	go func() {
 		err := http.ListenAndServeTLS(":8080", config.CertFile, config.KeyFile, nil)
 		if err != nil {
