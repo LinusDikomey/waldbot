@@ -29,13 +29,17 @@ func formatTime(minutes uint32) string {
 }
 
 func effectiveName(member *discordgo.Member) string {
+	var name string
 	if member == nil {
-		return "[Unbekannter Nutzer]"
+		name = "[Unbekannter Nutzer]"
 	} else if member.Nick != "" {
-		return member.Nick
+		name = member.Nick
 	} else {
-		return member.User.Username
+		name = member.User.Username
 	}
+	strings.ReplaceAll(name, "https://", "bruh://")
+	strings.ReplaceAll(name, "http://", "bruh://")
+	return name
 }
 
 func digitEmote(digit int) string {
