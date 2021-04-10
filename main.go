@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/LinusDikomey/waldbot/oauth"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -30,6 +31,15 @@ var (
 	oauthClientSecret string
 )
 
+func getEnv(name string) string {
+	env := os.Getenv(name)
+	if env == "" {
+		fmt.Println("Please set the environment variable '" + name + "'!")
+		os.Exit(-1)
+	}
+	return env
+}
+
 func main() {
 	fmt.Println("Starting Waldbot...")
 	loadData()
@@ -37,12 +47,15 @@ func main() {
 	loadFonts()
 	targetWidth = stringWidth(boldFont, "__Osabama gone Oase") + stringWidth(normalFont, ": 10000:00h")
 
-	oauthClientId = os.Getenv("WALDBOT_CLIENTID")
-	oauthClientSecret = os.Getenv("WALDBOT_CLIENTSECRET")
+	oauth.ClientId = getEnv("WALDBOT_CLIENTID")
+	oauth.ClientSecret = getEnv("WALDBOT_CLIENTSECRET")
+	token := getEnv("WALDBOT_TOKEN")
 
 	readDays("./data/days/")
-	fmt.Println("")
-	token := os.Getenv("WALDBOT_TOKEN")
+	if token == "" {
+		fmt.Println("Please set the environment variable 'WALDBOT_TOKEN'")
+	}
+
 	if token == "" {
 		fmt.Println("Could not find the bot token, please set the environment variable 'WALDBOT_TOKEN' to the application token!")
 		return

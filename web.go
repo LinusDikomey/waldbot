@@ -1,12 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
+
+	"github.com/LinusDikomey/waldbot/oauth"
 )
 
 type ApiUserStats struct {
@@ -26,6 +28,7 @@ func addWebHandlers() {
 	http.HandleFunc("/api/dayactivity", dayActivityHandler)
 	http.HandleFunc("/api/yearactivity", yearActivityHandler)
 	http.HandleFunc("/api/auth", authHandler)
+	http.HandleFunc("/api/user", userHandler)
 	go func() {
 		err := http.ListenAndServeTLS(":8080", config.CertFile, config.KeyFile, nil)
 		if err != nil {
@@ -69,13 +72,7 @@ func yearActivityHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func authHandler(w http.ResponseWriter, r *http.Request) {
-	type Request struct {
-		ClientId string			`json:"client_id"`
-		ClientSecret string		`json:"client_secret"`
-		Code string				`json:"code"`
-		RedirectUri string		`json:"redirect_uri"`
-		Scope string			`json:"scope"`
-	}
+	addHeaders(&w)
 
 	if r.Method != "GET" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -84,32 +81,71 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	params := r.URL.Query()
 	codes, ok := params["code"]
-	code := codes[0]
-	if !ok || len(code) < 1 {
+	if !ok || len(codes) < 1 {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Bad request, parameter 'code' missing!"))
+		return
 	}
-	fmt.Println("Received OAuth2 code:", code)
+	code := codes[0]
 	
-	data, _ := json.Marshal(Request {
-		ClientId: oauthClientId,
-		ClientSecret: oauthClientSecret,
-		Code: code,
-		RedirectUri: "wald.mbehrmann.de/auth",
-		Scope: "identify",
+	body, err := oauth.AuthCode(code)
+	if err != nil {
+		fmt.Println("Error while making OAuth code request:", err)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("{\"error\": \"code_invalid\"}"))
+		return
+	}
+
+	sessionToken := addOAuthSession(body.AccessToken, body.RefreshToken, body.ExpiresIn)
+
+	type Response struct { 
+		Token string		`json:"token"` 
+	}
+	response, _ := json.Marshal(Response{ Token: sessionToken })
+	w.Write(response)
+}
+
+func userHandler(w http.ResponseWriter, r *http.Request) {
+	addHeaders(&w)
+	if r.Method != "GET" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("Method not allowed! Use GET!"))
+		return
+	}
+	
+	auth := r.Header["Authorization"]
+	const AUTH_PREFIX = "Bearer "
+	if len(auth) < 1 || !strings.HasPrefix(auth[0], AUTH_PREFIX) {
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("Unauthorized! Use Bearer token"))
+		return
+	}
+	sessionToken := auth[0][len(AUTH_PREFIX):]
+	session := getOAuthSession(sessionToken)
+	if session == nil {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte("Invalid session token!"))
+		return
+	}
+	me, err := oauth.Me(session.AccessToken)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Request error: " + err.Error()))
+		return
+	}
+
+	type Response struct {
+		Username string			`json:"username"`
+		Discriminator string	`json:"discriminator"`
+		Id string				`json:"id"`
+		AvatarURL string		`json:"avatarUrl"`
+	}
+
+	resp, _ := json.Marshal(Response {
+		Username: me.User.Username,
+		Discriminator: me.User.Discriminator,
+		Id: me.User.ID,
+		AvatarURL: me.User.AvatarURL(""),
 	})
-	req, err := http.NewRequest("POST", "https://discord.com/api/v8/oauth2/token", bytes.NewReader(data))
-	if err != nil {
-		fmt.Println("could not create request:", err)
-		return
-	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	client := http.Client {}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error while executing auth request:", err)
-		return
-	}
-	fmt.Println("Response:", resp)
-	
+	w.Write(resp)
 }

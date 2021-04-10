@@ -6,7 +6,17 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"time"
+
+	"github.com/LinusDikomey/waldbot/oauth"
 )
+
+type OAuthLogin struct {
+	AccessToken string
+	RefreshToken string
+	AccessExpires uint64
+	Expires uint64
+}
 
 type Data struct {
 	ServerdatenMessageId       int64
@@ -20,6 +30,8 @@ type Data struct {
 	NextChannelId  int16
 
 	DynamicChannels map[string][]string
+
+	OAuthLogins map[string]OAuthLogin
 }
 
 var (
@@ -35,6 +47,9 @@ func loadData() {
 	defer file.Close()
 	bytes, _ := ioutil.ReadAll(file)
 	err = json.Unmarshal(bytes, &data)
+	if data.OAuthLogins == nil {
+		data.OAuthLogins = map[string]OAuthLogin {}
+	}
 }
 
 func saveData() {
@@ -87,4 +102,47 @@ func longUserId(id int16) string {
 		}
 	}
 	panic("Could not find long user id by short id: " + fmt.Sprint(id))
+}
+
+func addOAuthSession(access string, refresh string, expiresIn uint64) string {
+	found := true
+	var token string
+	// search for unique token
+	for found {
+		token = randomBase64String(32)
+		_, found = data.OAuthLogins[token]
+	}
+	now := time.Now()
+	data.OAuthLogins[token] = OAuthLogin {
+		AccessToken: access,
+		RefreshToken: refresh,
+		AccessExpires: uint64(now.Add(time.Duration(expiresIn) * time.Second).Unix()),
+		Expires: uint64(now.Add(24 * time.Hour * 30).Unix()), // session expires after 30 days
+	}
+	return token
+}
+
+func getOAuthSession(token string) *OAuthLogin {
+	if session, ok := data.OAuthLogins[token]; ok {
+		now := time.Now()
+		// update expiry
+		session.Expires = uint64(now.Add(24 * time.Hour * 90).Unix())
+
+		if session.AccessExpires < uint64(now.Unix()) + 60 {
+			fmt.Println("Refreshing OAuth2 access token")
+			access, err := oauth.RefreshToken(session.RefreshToken)
+			if err != nil {
+				fmt.Println("Error while refreshing token:", err)
+				return nil
+			}
+			session.AccessToken = access.AccessToken
+			session.AccessExpires = uint64(now.Add(time.Duration(access.ExpiresIn) * time.Second).Unix())
+		}
+
+		data.OAuthLogins[token] = session
+		// return found session
+		return &session
+	} else {
+		return nil
+	}
 }
