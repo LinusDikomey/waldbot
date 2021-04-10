@@ -37,8 +37,8 @@ func effectiveName(member *discordgo.Member) string {
 	} else {
 		name = member.User.Username
 	}
-	strings.ReplaceAll(name, "https://", "bruh://")
-	strings.ReplaceAll(name, "http://", "bruh://")
+	name = strings.ReplaceAll(name, "https://", "bruh://")
+	name = strings.ReplaceAll(name, "http://", "bruh://")
 	return name
 }
 
