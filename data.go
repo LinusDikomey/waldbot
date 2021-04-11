@@ -146,3 +146,11 @@ func getOAuthSession(token string) *OAuthLogin {
 		return nil
 	}
 }
+
+func removeOAuthSession(token string) bool {
+	if _, ok := data.OAuthLogins[token]; ok {
+		delete(data.OAuthLogins, token)
+		return true
+	}
+	return false
+}

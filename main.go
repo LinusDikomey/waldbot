@@ -85,23 +85,26 @@ func main() {
 		return
 	}
 
-	for _, v := range slashCommands {
+	/*for _, v := range slashCommands {
 		fmt.Println("Adding command:", v.Name, ", stateId:", dc.State.User.ID, ", guildId:", config.GuildId, ", v:", v)
 		_, err := dc.ApplicationCommandCreate(dc.State.User.ID, config.GuildId, v)
 		if err != nil {
 			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
 		}
-	}
+	}*/
 
 	guild, err = dc.Guild(config.GuildId)
-
 	if err != nil {
 		log.Fatal("Could not find guild specified in config!")
 	}
-	updateRankings()
+
 	addWebHandlers()
 	fmt.Println("Bot is now running!")
+
 	currentDay = dateFromTime(time.Now())
+	
+	updateRankings()
+	
 	mainLoop()
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
