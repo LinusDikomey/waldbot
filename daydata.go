@@ -113,9 +113,11 @@ func readDays(dir string) {
         log.Fatal(err)
     }
 	fmt.Println("Reading", len(files), "day files!")
+	start_time := time.Now()
     for _, f := range files {
         readDay(dir, f.Name())
     }
+	fmt.Println("Took", time.Since(start_time), "to load files")
 }
 
 func readDay(path string, file string) {

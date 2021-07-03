@@ -81,7 +81,7 @@ var commandDescriptions = [...]Command{
 	{prefix: "channels {optional: Nutzer/Zeitfenster}", description: "Zeigt ein Tortendiagramm mit der Verteilung deiner genutzten Kanäle"},
 	{prefix: "session", description: "Zeigt deine aktuelle Voicechat-Session"},
 	{prefix: "mate {Nutzer}", description: "Zeigt deine Zeit mit einem Nutzer an"},
-	{prefix: "mates", description: "Zeigt ein Tortendiagramm der Sprachchatzeit mit anderen Nutzern"},
+	{prefix: "mates {optional: Nutzer/Zeitfenster}", description: "Zeigt ein Tortendiagramm der Sprachchatzeit mit anderen Nutzern"},
 	{prefix: "stonks {optional: Nutzer/Zeitfenster}", description: "GME TO THE MOON"},
 	{prefix: "usercount", description: "Zeigt die Besucher des Discords pro Tag an"},
 }
@@ -350,15 +350,31 @@ func mateHandler(args string, channel string, author *discordgo.Member) {
 func matesHandler(args string, channel string, author *discordgo.Member) {
 	const matesToShow = 9
 
-	authorId := shortUserId(author.User.ID)
-	mates, allMatesTime := timeWithMates(authorId, dateAllTimeCondition)
-	text := author.Mention() + ", deine Top-Freunde sind:\n"
+	ok, dateCondition, member := parseMemberOrDateCondition(args, channel, author)
+	self := author == member
+	if !ok { return }
+
+	memberId := shortUserId(member.User.ID)
+	mates, allMatesTime := timeWithMates(memberId, dateCondition)
+	
+	var text string
+	if self {
+		text = author.Mention() + ", deine Top-Freunde sind:\n"
+	} else {
+		text = "Die Top-Freunde von " + effectiveName(member) + " sind:\n"
+	}
 	values := []chart.Value{}
 	topMatesTime := uint32(0)
 	listCount := matesToShow
 	if len(mates) < matesToShow {
 		if len(mates) == 0 {
-			dc.ChannelMessageSend(channel, "Du hast keine Freunde "+author.Mention()+" :cry:")
+			var text string
+			if self {
+				text = "Du hast keine Freunde "+author.Mention()+" :cry:"
+			} else {
+				text = effectiveName(member) + " hat keine Freunde :cry:"
+			}
+			dc.ChannelMessageSend(channel, text)
 			return
 		}
 		listCount = len(mates)

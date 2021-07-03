@@ -27,8 +27,6 @@ var (
 	currentDay Date
 	targetWidth int
 	guild *discordgo.Guild
-	oauthClientId string
-	oauthClientSecret string
 )
 
 func getEnv(name string) string {
@@ -47,8 +45,15 @@ func main() {
 	loadFonts()
 	targetWidth = stringWidth(boldFont, "__Osabama gone Oase") + stringWidth(normalFont, ": 10000:00h")
 
-	oauth.ClientId = getEnv("WALDBOT_CLIENTID")
-	oauth.ClientSecret = getEnv("WALDBOT_CLIENTSECRET")
+
+	fmt.Println("NOWEB:", os.Getenv("NOWEB"))
+	web := os.Getenv("NOWEB") != "true"
+	if !web {
+		fmt.Println("No web mode enabled!") 
+	} else {
+		oauth.ClientId = getEnv("WALDBOT_CLIENTID")
+		oauth.ClientSecret = getEnv("WALDBOT_CLIENTSECRET")
+	}
 	token := getEnv("WALDBOT_TOKEN")
 
 	readDays("./data/days/")
@@ -98,7 +103,8 @@ func main() {
 		log.Fatal("Could not find guild specified in config!")
 	}
 
-	addWebHandlers()
+	if web { addWebHandlers() }
+
 	fmt.Println("Bot is now running!")
 
 	currentDay = dateFromTime(time.Now())
