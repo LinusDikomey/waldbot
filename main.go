@@ -72,6 +72,7 @@ func main() {
 	}
 
 	// handlers
+	dc.AddHandler(onServerJoin)
 	dc.AddHandler(onMessageCreate)
 	dc.AddHandler(onChannelConnect)
 	dc.AddHandler(onChannelDisconnect)
@@ -123,6 +124,18 @@ func main() {
 
 func dayMinute(t time.Time) int16 {
 	return int16(t.Hour() * 60 + t.Minute())
+}
+
+func onServerJoin(s *discordgo.Session, m *discordgo.GuildMemberAdd) {
+	heliumId := "386512906549985300"
+	m.Roles = append(m.Roles, heliumId)
+	_, err := s.State.Guild(m.GuildID)
+	err = s.GuildMemberEdit(m.GuildID, m.User.ID, m.Roles)
+	if err == nil {
+		fmt.Println("Added Helium role to new member ", m.User.Username)
+	} else {
+		fmt.Println("Error giving Helium role to new member ", m.User.Username)
+	}
 }
 
 func onMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
