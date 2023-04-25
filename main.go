@@ -111,7 +111,8 @@ func main() {
 	currentDay = dateFromTime(time.Now())
 	
 	updateRankings()
-	
+	cleanUpRoles()
+
 	mainLoop()
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
@@ -127,9 +128,11 @@ func dayMinute(t time.Time) int16 {
 }
 
 func onServerJoin(s *discordgo.Session, m *discordgo.GuildMemberAdd) {
-	heliumId := "386512906549985300"
-	m.Roles = append(m.Roles, heliumId)
+	m.Roles = append(m.Roles, HELIUM_ID)
 	_, err := s.State.Guild(m.GuildID)
+	if err != nil {
+		fmt.Println("Failed to update guild state", err)
+	}
 	err = s.GuildMemberEdit(m.GuildID, m.User.ID, m.Roles)
 	if err == nil {
 		fmt.Println("Added Helium role to new member ", m.User.Username)
@@ -172,6 +175,7 @@ func mainLoop() {
 	go func() {
 		time.Sleep(time.Duration(60 - currentTime.Second()) * time.Second)
 		minuteUpdate()
+		cleanUpRoles()
 		ticker := time.NewTicker(60 * time.Second)
     	for {
 			select {
@@ -503,4 +507,69 @@ func timeWithMates(user int16, dateCondition DateCondition) ([]UserStats, uint32
 		return slice[i].minutes > slice[j].minutes
 	})
 	return slice, allTime
+}
+
+const HELIUM_ID = "386512906549985300"
+
+var ROLES = [...]string {
+	"386512906549985300", // helium
+	"386513014733406230", // ...
+	"386513346381479936",
+	"386513402878623747",
+	"386513476337795081",
+	"386513575587610624", // radon
+}
+
+func contains(s []string, e string) bool {
+    for _, a := range s {
+        if a == e {
+            return true
+        }
+    }
+    return false
+}
+
+func cleanUpRoles() {
+	for _, m := range guild.Members {
+		maxRole := -1
+		for i, role := range ROLES {
+			if contains(m.Roles, role) {
+				maxRole = i
+			}
+		}
+		for i := 0; i < maxRole; i++ {
+			roleIndex := -1
+			for j, role := range m.Roles {
+				if role == ROLES[i] {
+					roleIndex = j
+				}
+			}
+			if roleIndex == -1 { continue }
+
+			m.Roles = append(m.Roles[:roleIndex], m.Roles[roleIndex+1:]...)
+			_, err := dc.State.Guild(guild.ID)
+			if err != nil {
+				fmt.Println("Failed to update guild state", err)
+			}
+			err = dc.GuildMemberEdit(m.GuildID, m.User.ID, m.Roles)
+			if err == nil {
+				fmt.Println("Removed role ", ROLES[i], "from", m.User.Username)
+			} else {
+				fmt.Println("Failed to remove role ", ROLES[i], "from", m.User.Username)
+			}
+		}
+		if maxRole == -1 {
+			m.Roles = append(m.Roles, HELIUM_ID)
+			_, err := dc.State.Guild(guild.ID)	
+			if err != nil {
+				fmt.Println("Failed to update guild state", err)
+			}
+			err = dc.GuildMemberEdit(m.GuildID, m.User.ID, m.Roles)
+			if err == nil {
+				fmt.Println("Added Helium role to", m.User.Username)
+			} else {
+				fmt.Println("Failed to remove helium role from", m.User.Username)
+			}
+		}
+	}
 }
