@@ -2,6 +2,8 @@ package main
 
 import (
 	"time"
+    "waldbot/date"
+    "waldbot/data"
 )
 
 type ActivityEntry struct {
@@ -19,18 +21,18 @@ func activity(sectionsPerDay int16, days int16, timeFormatter func(time time.Tim
 	sectionCount := sectionsPerDay * days
 	sections := make([][]int16, sectionCount)
 
-	dayMinute := dayMinute(time.Now())
+	dayMinute := date.DayMinute(time.Now())
 	startSection := dayMinute / int16(minutesPerSection)
 
-	startTime := time.Date(int(currentDay.year), time.Month(currentDay.month), int(currentDay.day), 
+	startTime := time.Date(int(date.CurrentDay.Year), time.Month(date.CurrentDay.Month), int(date.CurrentDay.Day), 
 		(int(startSection) * minutesPerSection) / 60, (int(startSection) * minutesPerSection) % 60, 0, 0, time.Local).
 		Add(time.Hour * time.Duration(24 * -days))
 
 
-	trackSession := func(dayIndex int16, date Date, session *VoiceSession, sections *[][]int16)  {
+	trackSession := func(dayIndex int16, date date.Date, session *data.VoiceSession, sections *[][]int16)  {
 		currentMinute := 0
-		for currentMinute < int(session.minutes) {
-			currentDayMinute := session.dayMinute + int16(currentMinute) 
+		for currentMinute < int(session.Minutes) {
+			currentDayMinute := session.DayMinute + int16(currentMinute) 
 			index := dayIndex * sectionsPerDay + (currentDayMinute / int16(minutesPerSection)) - startSection
 			if index < 0 {
 				currentMinute += minutesPerSection
@@ -40,13 +42,13 @@ func activity(sectionsPerDay int16, days int16, timeFormatter func(time time.Tim
 			}
 			found := false
 			for _, user := range (*sections)[index] {
-				if user == session.userID {
+				if user == session.UserID {
 					found = true
 					break
 				}
 			}
 			if !found {
-				(*sections)[index] = append((*sections)[index], session.userID)
+				(*sections)[index] = append((*sections)[index], session.UserID)
 			}
 
 			currentMinute += minutesPerSection
@@ -54,9 +56,9 @@ func activity(sectionsPerDay int16, days int16, timeFormatter func(time time.Tim
 	}
 
 	for currentDay := int16(0); currentDay <= days; currentDay++ {
-		currentDate := dateFromTime(startTime.AddDate(0, 0, int(currentDay)))
-		if day, ok := dayData[currentDate]; ok {
-			for _, sessions := range day.channels {
+		currentDate := date.FromTime(startTime.AddDate(0, 0, int(currentDay)))
+		if day, ok := data.DayData[currentDate]; ok {
+			for _, sessions := range day.Channels {
 				for _, session := range sessions {
 					trackSession(currentDay, currentDate, &session, &sections)
 				}
@@ -64,8 +66,8 @@ func activity(sectionsPerDay int16, days int16, timeFormatter func(time time.Tim
 		}
 	}
 
-	for _, session := range sessions {
-		trackSession(days, currentDay, &session.session, &sections)
+	for _, session := range data.Sessions {
+		trackSession(days, date.CurrentDay, &session.Session, &sections)
 	} 
 
 	output := make([]ActivityEntry, sectionCount)

@@ -1,4 +1,4 @@
-package main
+package data
 
 import (
 	"bytes"
@@ -10,63 +10,27 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"waldbot/date"
 )
 
 
-type Date struct {
-	day   uint16
-	month uint8
-	year  uint16
-}
-
-type sortDates []Date
-
-func (s sortDates) Len() int {
-    return len(s)
-}
-func (s sortDates) Swap(i, j int) {
-    s[i], s[j] = s[j], s[i]
-}
-func (s sortDates) Less(i, j int) bool {
-    if s[i].year == s[j].year {
-		if s[i].month == s[j].month {
-			return s[i].day < s[j].day
-		} else {
-			return s[i].month < s[j].month
-		}
-	} else {
-		return s[i].year < s[j].year
-	}
-}
-
-func dateIsSmaller(a, b Date) bool {
-    if a.year == b.year {
-		if a.month == b.month {
-			return a.day < b.day
-		} else {
-			return a.month < b.month
-		}
-	} else {
-		return a.year < b.year
-	}
-}
 
 type ChannelId = int16
 type UserId = int16
 
 type Day struct {
-	channels map[ChannelId][]VoiceSession
+	Channels map[ChannelId][]VoiceSession
 }
 
 type VoiceSession struct {
-	dayMinute int16
-	userID    UserId
-	minutes   int16
+	DayMinute int16
+	UserID    UserId
+	Minutes   int16
 }
 
 func loadDay(buffer []byte) Day {
 	reader := bytes.NewReader(buffer)
-	day := Day {channels: map[ChannelId][]VoiceSession{}}
+	day := Day {Channels: map[ChannelId][]VoiceSession{}}
 	for reader.Len() > 0 { // while bytes are still remaining
 		channelId := ChannelId(0)
 		len := int16(0)
@@ -76,38 +40,30 @@ func loadDay(buffer []byte) Day {
 		sessions := []VoiceSession {}
 		for i := int16(0); i < len; i++ {
 			session := VoiceSession {}
-			binary.Read(reader, binary.BigEndian, &session.dayMinute)
-			binary.Read(reader, binary.BigEndian, &session.userID)
-			binary.Read(reader, binary.BigEndian, &session.minutes)
+			binary.Read(reader, binary.BigEndian, &session.DayMinute)
+			binary.Read(reader, binary.BigEndian, &session.UserID)
+			binary.Read(reader, binary.BigEndian, &session.Minutes)
 			sessions = append(sessions, session)
 		}
-		day.channels[channelId] = sessions
+		day.Channels[channelId] = sessions
 	}
 	return day
 }
 
-func (day *Day) save(f *os.File) {
-	for channelId, sessions := range(day.channels) {
+func (day *Day) Save(f *os.File) {
+	for channelId, sessions := range(day.Channels) {
 		binary.Write(f, binary.BigEndian, &channelId)
 		binary.Write(f, binary.BigEndian, int16(len(sessions)))
 		
 		for _, session := range(sessions) {
-			binary.Write(f, binary.BigEndian, &session.dayMinute)
-			binary.Write(f, binary.BigEndian, &session.userID)
-			binary.Write(f, binary.BigEndian, &session.minutes)
+			binary.Write(f, binary.BigEndian, &session.DayMinute)
+			binary.Write(f, binary.BigEndian, &session.UserID)
+			binary.Write(f, binary.BigEndian, &session.Minutes)
 		}
 	}
 }
 
-func newDate(day uint16, month uint8, year uint16) Date {
-	return Date{day: day, month: month, year: year}
-}
-
-func dateFromTime(t time.Time) Date {
-	return newDate(uint16(t.Day()), uint8(t.Month()), uint16(t.Year()))
-}
-
-func readDays(dir string) {
+func ReadDays(dir string) {
 	files, err := ioutil.ReadDir(dir)
     if err != nil {
         log.Fatal(err)
@@ -132,10 +88,10 @@ func readDay(path string, file string) {
 	if err1 != nil || err2 != nil || err3 != nil {
 		log.Fatal("Could not parse day of days file '", file, "'")
 	}
-	date := newDate(uint16(day), uint8(month), uint16(year))
+	date := date.New(uint16(day), uint8(month), uint16(year))
 	bytes, err := ioutil.ReadFile(path + file)
 	if err != nil {
 		log.Fatal("Could not read the day file: ", file, ", error: ", err)
 	}
-	dayData[date] = loadDay(bytes)
+	DayData[date] = loadDay(bytes)
 }

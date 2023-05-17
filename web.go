@@ -8,7 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/LinusDikomey/waldbot/oauth"
+	"waldbot/data"
+	"waldbot/oauth"
 )
 
 type ApiUserStats struct {
@@ -129,7 +130,7 @@ func authHandler(r *http.Request) (int, []byte) {
 		return http.StatusUnauthorized, []byte("{\"error\": \"code_invalid\"}")
 	}
 
-	sessionToken := addOAuthSession(body.AccessToken, body.RefreshToken, body.ExpiresIn)
+	sessionToken := data.AddOAuthSession(body.AccessToken, body.RefreshToken, body.ExpiresIn)
 
 	type Response struct { 
 		Token string		`json:"token"` 
@@ -139,7 +140,7 @@ func authHandler(r *http.Request) (int, []byte) {
 }
 
 func userHandler(r *http.Request, token string) (int, []byte) {
-	session := getOAuthSession(token)
+	session := data.GetOAuthSession(token)
 	if session == nil {
 		return http.StatusUnauthorized, []byte("Invalid session token!")
 	}
@@ -165,7 +166,7 @@ func userHandler(r *http.Request, token string) (int, []byte) {
 }
 
 func logoutHandler(r *http.Request, token string) (int, []byte) {
-	if !removeOAuthSession(token) {
+	if !data.RemoveOAuthSession(token) {
 		return http.StatusUnauthorized, []byte("Invalid session token!")
 	}
 	type Response struct {

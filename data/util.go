@@ -1,25 +1,26 @@
-package main
+package data
 
 import (
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/golang/freetype/truetype"
+
+    "waldbot/date"
 )
 
 
 var (
-	normalFont *truetype.Font
-	boldFont *truetype.Font
+	NormalFont *truetype.Font
+	BoldFont *truetype.Font
 )
 
 
-func formatTime(minutes uint32) string {
+func FormatTime(minutes uint32) string {
 	hours := minutes / 60
 	hourMinutes := minutes % 60
 	minutesString := fmt.Sprint(hourMinutes)
@@ -29,7 +30,7 @@ func formatTime(minutes uint32) string {
 	return fmt.Sprintf("%v:%vh", hours, minutesString)
 }
 
-func effectiveName(member *discordgo.Member) string {
+func EffectiveName(member *discordgo.Member) string {
 	var name string
 	if member == nil {
 		name = "[Unbekannter Nutzer]"
@@ -43,7 +44,7 @@ func effectiveName(member *discordgo.Member) string {
 	return name
 }
 
-func digitEmote(digit int) string {
+func DigitEmote(digit int) string {
 	switch digit {
 	case 0:
 		return ":zero:"
@@ -70,34 +71,34 @@ func digitEmote(digit int) string {
 	}
 }
 
-func loadFonts() {
+func LoadFonts() {
 	normalFile, _ := os.Open("./data/fonts/whitneylight.ttf")
 	//normalFile, _ := os.Open("./data/fonts/whitneymedium.ttf")
 	boldFile, _ := os.Open("./data/fonts/whitneybold.ttf")
 	normalBytes, _ := ioutil.ReadAll(normalFile)
 	boldBytes, _ := ioutil.ReadAll(boldFile)
-	normalFont, _ = truetype.Parse(normalBytes)
-	boldFont, _ = truetype.Parse(boldBytes)
+	NormalFont, _ = truetype.Parse(normalBytes)
+	BoldFont, _ = truetype.Parse(boldBytes)
 }
 
-func charWidth(font *truetype.Font, c rune) int {
+func CharWidth(font *truetype.Font, c rune) int {
 	hMetric := font.HMetric(1000 << 6, font.Index(c))
 	return hMetric.AdvanceWidth.Ceil()
 }
 
-func stringWidth(font *truetype.Font, str string) int {
+func StringWidth(font *truetype.Font, str string) int {
 	width := 0
 	for c := range str {
-		width += charWidth(font, rune(c))
+		width += CharWidth(font, rune(c))
 	}
 	return width
 }
 
-func parseMember(str string) *discordgo.Member {
+func ParseMember(guildID string, str string) *discordgo.Member {
 	if str == "" {
 		return nil
 	}
-	members, _ := dc.GuildMembers(config.GuildId, "0", 1000)
+	members, _ := Dc.GuildMembers(guildID, "0", 1000)
 	for _, member := range(members) {
 		if member.Nick == str ||
 		   member.User.Username == str ||
@@ -115,7 +116,7 @@ func parseMember(str string) *discordgo.Member {
 	return nil
 }
 
-func parseDate(str string) *Date {
+func parseDate(str string) *date.Date {
 	split := strings.Split(str, ".")
 	if len(split) != 3 {
 		return nil
@@ -129,31 +130,31 @@ func parseDate(str string) *Date {
 	if day < 1 || day > 31 || month < 1 || month > 12 || year < 1 || year > 65000 {
 		return nil
 	}
-	date := newDate(uint16(day), uint8(month), uint16(year))
+	date := date.New(uint16(day), uint8(month), uint16(year))
 	return &date
 }
 
 const (
-	parseSuccess = iota
-	parseInvalid = iota
-	parseNone = iota
+	ParseSuccess = iota
+	ParseInvalid = iota
+	ParseNone = iota
 )
 
 // Tries to parse the args string as any date range. 
 // Will always return back the default condition and wether it successfully parsed a date
-func parseDateCondition(args string, defaultCondition DateCondition) (DateCondition, uint8) {
+func ParseDateCondition(args string, defaultCondition date.DateCondition) (date.DateCondition, uint8) {
 	condition := defaultCondition
 	if args != "" {
 		if args == "daily" {
-			return dateDailyCondition, parseSuccess
+			return date.DailyCondition, ParseSuccess
 		} else if args == "weekly" {
-			return dateWeeklyCondition, parseSuccess
+			return date.WeeklyCondition, ParseSuccess
 		} else if args == "monthly" {
-			return dateMonthlyCondition, parseSuccess
+			return date.MonthlyCondition, ParseSuccess
 		} else if args == "yearly" {
-			return dateYearlyCondition, parseSuccess
+			return date.YearlyCondition, ParseSuccess
 		} else if args == "all" || args == "allTime" {
-			return dateAllTimeCondition, parseSuccess	
+			return date.AllTimeCondition, ParseSuccess	
 		} else {
 			dateRangeSplit := strings.Split(args, "-")
 			dateCount := len(dateRangeSplit)
@@ -167,7 +168,7 @@ func parseDateCondition(args string, defaultCondition DateCondition) (DateCondit
 						endDate = parseDate(dateRangeSplit[1])
 					}
 					if startDate == nil || endDate == nil {
-						return condition, parseInvalid
+						return condition, ParseInvalid
 					}
 
 					isDate = true
@@ -178,41 +179,41 @@ func parseDateCondition(args string, defaultCondition DateCondition) (DateCondit
 					year, err2 := strconv.Atoi(split[1])
 					if err1 == nil || err2 == nil {
 						if month < 1 || month > 12 || year < 0 || year > 65000 {
-							return condition, parseInvalid
+							return condition, ParseInvalid
 						}
-						startDate = &Date {day: 1, month: uint8(month), year: uint16(year)}
-						endDate = &Date {day: 31, month: uint8(month), year: uint16(year)}
+						startDate = &date.Date {Day: 1, Month: uint8(month), Year: uint16(year)}
+						endDate = &date.Date {Day: 31, Month: uint8(month), Year: uint16(year)}
 						isDate = true
 					}
 				}
 				if isDate {
-					condition = func(day Date) bool {
-						return !dateIsSmaller(day, *startDate) && !dateIsSmaller(*endDate, day)
+					condition = func(day date.Date) bool {
+						return !date.IsSmaller(day, *startDate) && !date.IsSmaller(*endDate, day)
 					}
-					return condition, parseSuccess
+					return condition, ParseSuccess
 				} else {
-					return condition, parseNone
+					return condition, ParseNone
 				}
 			} else {
-				return condition, parseNone
+				return condition, ParseNone
 			}
 		}
 	} else {
-		return condition, parseNone
+		return condition, ParseNone
 	}
 }
 
-func parseMemberOrDateCondition(args string, channel string, member *discordgo.Member) (bool, func(Date) bool, *discordgo.Member) {
-	condition, success := parseDateCondition(args, dateAllTimeCondition)
-	if success == parseInvalid {
-		dc.ChannelMessageSend(channel, "Invalides Datum angegeben!")
+func parseMemberOrDateCondition(guildID string, args string, channel string, member *discordgo.Member) (bool, func(date.Date) bool, *discordgo.Member) {
+	condition, success := ParseDateCondition(args, date.AllTimeCondition)
+	if success == ParseInvalid {
+		Dc.ChannelMessageSend(channel, "Invalides Datum angegeben!")
 		return false, nil, nil
 	}
 	if args != "" {	
-		if success == parseNone {
-			member = parseMember(args)
+		if success == ParseNone {
+			member = ParseMember(guildID, args)
 			if member == nil {
-				dc.ChannelMessageSend(channel, "Der angegebene Nutzer wurde nicht gefunden!")
+				Dc.ChannelMessageSend(channel, "Der angegebene Nutzer wurde nicht gefunden!")
 				return false, nil, nil
 			}
 		}
@@ -221,11 +222,3 @@ func parseMemberOrDateCondition(args string, channel string, member *discordgo.M
 }
 
 
-func randomBase64String(n int) string {
-	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-")
-	b := make([]rune, n)
-    for i := range b {
-        b[i] = letterRunes[rand.Intn(len(letterRunes))]
-    }
-    return string(b)
-}

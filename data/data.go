@@ -1,21 +1,30 @@
-package main
+package data
 
 import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"os"
 	"time"
 
-	"github.com/LinusDikomey/waldbot/oauth"
+	"waldbot/date"
+	"waldbot/oauth"
+
+	"github.com/bwmarrin/discordgo"
 )
 
-type OAuthLogin struct {
-	AccessToken string
-	RefreshToken string
-	AccessExpires uint64
-	Expires uint64
+var (
+	Dc *discordgo.Session
+	DayData map[date.Date]Day = map[date.Date]Day {}
+	Sessions map[UserId]ActiveSession = map[UserId]ActiveSession {}
+	GuildData Data
+)
+
+type ActiveSession struct {
+	Session VoiceSession
+	ChannelID ChannelId
 }
 
 type Data struct {
@@ -31,14 +40,10 @@ type Data struct {
 
 	DynamicChannels map[string][]string
 
-	OAuthLogins map[string]OAuthLogin
+	OAuthLogins map[string]oauth.Login
 }
 
-var (
-	data Data
-)
-
-func loadData() {
+func LoadData() {
 	fmt.Println("Loading data file...")
 	file, err := os.Open("./data/data.json")
 	if err != nil {
@@ -46,16 +51,16 @@ func loadData() {
 	}
 	defer file.Close()
 	bytes, _ := ioutil.ReadAll(file)
-	err = json.Unmarshal(bytes, &data)
-	if data.OAuthLogins == nil {
-		data.OAuthLogins = map[string]OAuthLogin {}
+	err = json.Unmarshal(bytes, &GuildData)
+	if GuildData.OAuthLogins == nil {
+		GuildData.OAuthLogins = map[string]oauth.Login {}
 	}
 }
 
-func saveData() {
+func SaveData() {
 	fmt.Println("Saving data file...")
 	file, _ := os.Create("./data/data.json")
-	bytes, err := json.Marshal(&data)
+	bytes, err := json.Marshal(&GuildData)
 	if err != nil {
 		log.Fatal("Json Marshal error:", err)
 	}
@@ -66,28 +71,28 @@ func saveData() {
 	file.Close()
 }
 
-func shortUserId(id string) int16 {
-	if val, ok := data.ShortUserIds[id]; ok {
+func ShortUserId(id string) int16 {
+	if val, ok := GuildData.ShortUserIds[id]; ok {
 		return val
 	}
-	shortId := data.NextId
-	data.NextId++
-	data.ShortUserIds[fmt.Sprint(id)] = shortId
+	shortId := GuildData.NextId
+	GuildData.NextId++
+	GuildData.ShortUserIds[fmt.Sprint(id)] = shortId
 	return shortId
 }
 
-func shortChannelId(id string) int16 {
-	if val, ok := data.ShortChannelId[id]; ok {
+func ShortChannelId(id string) int16 {
+	if val, ok := GuildData.ShortChannelId[id]; ok {
 		return val
 	}
-	shortId := data.NextChannelId
-	data.NextChannelId++
-	data.ShortChannelId[fmt.Sprint(id)] = shortId
+	shortId := GuildData.NextChannelId
+	GuildData.NextChannelId++
+	GuildData.ShortChannelId[fmt.Sprint(id)] = shortId
 	return shortId
 }
 
-func longChannelId(id int16) string {
-	for longId, shortId := range data.ShortChannelId {
+func LongChannelId(id int16) string {
+	for longId, shortId := range GuildData.ShortChannelId {
 		if shortId == id {
 			return longId
 		}
@@ -95,8 +100,8 @@ func longChannelId(id int16) string {
 	panic("Could not find long channel id by short id: " + fmt.Sprint(id))
 }
 
-func longUserId(id int16) string {
-	for longId, shortId := range data.ShortUserIds {
+func LongUserId(id int16) string {
+	for longId, shortId := range GuildData.ShortUserIds {
 		if shortId == id {
 			return longId
 		}
@@ -104,16 +109,16 @@ func longUserId(id int16) string {
 	panic("Could not find long user id by short id: " + fmt.Sprint(id))
 }
 
-func addOAuthSession(access string, refresh string, expiresIn uint64) string {
+func AddOAuthSession(access string, refresh string, expiresIn uint64) string {
 	found := true
 	var token string
 	// search for unique token
 	for found {
 		token = randomBase64String(32)
-		_, found = data.OAuthLogins[token]
+		_, found = GuildData.OAuthLogins[token]
 	}
 	now := time.Now()
-	data.OAuthLogins[token] = OAuthLogin {
+	GuildData.OAuthLogins[token] = oauth.Login {
 		AccessToken: access,
 		RefreshToken: refresh,
 		AccessExpires: uint64(now.Add(time.Duration(expiresIn) * time.Second).Unix()),
@@ -122,8 +127,8 @@ func addOAuthSession(access string, refresh string, expiresIn uint64) string {
 	return token
 }
 
-func getOAuthSession(token string) *OAuthLogin {
-	if session, ok := data.OAuthLogins[token]; ok {
+func GetOAuthSession(token string) *oauth.Login {
+	if session, ok := GuildData.OAuthLogins[token]; ok {
 		now := time.Now()
 		// update expiry
 		session.Expires = uint64(now.Add(24 * time.Hour * 90).Unix())
@@ -139,7 +144,7 @@ func getOAuthSession(token string) *OAuthLogin {
 			session.AccessExpires = uint64(now.Add(time.Duration(access.ExpiresIn) * time.Second).Unix())
 		}
 
-		data.OAuthLogins[token] = session
+		GuildData.OAuthLogins[token] = session
 		// return found session
 		return &session
 	} else {
@@ -147,10 +152,19 @@ func getOAuthSession(token string) *OAuthLogin {
 	}
 }
 
-func removeOAuthSession(token string) bool {
-	if _, ok := data.OAuthLogins[token]; ok {
-		delete(data.OAuthLogins, token)
+func RemoveOAuthSession(token string) bool {
+	if _, ok := GuildData.OAuthLogins[token]; ok {
+		delete(GuildData.OAuthLogins, token)
 		return true
 	}
 	return false
+}
+
+func randomBase64String(n int) string {
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-")
+	b := make([]rune, n)
+    for i := range b {
+        b[i] = letterRunes[rand.Intn(len(letterRunes))]
+    }
+    return string(b)
 }

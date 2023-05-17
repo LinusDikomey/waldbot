@@ -1,3 +1,4 @@
+/*
 package main
 
 import (
@@ -6,26 +7,11 @@ import (
 	"log"
 	"math"
 	"sort"
-	"strconv"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/wcharczuk/go-chart/v2"
 )
-
-func MemberValue(o *discordgo.ApplicationCommandInteractionDataOption) *discordgo.Member {
-	userID := o.StringValue()
-	if userID == "" {
-		return nil
-	}
-
-	m, err := dc.State.Member(config.GuildId, userID)
-	if err != nil {
-		return nil
-	}
-
-	return m
-}
 
 type Command struct {
 	prefix      string
@@ -33,31 +19,6 @@ type Command struct {
 	description string
 }
 
-var (
-	slashCommands = []*discordgo.ApplicationCommand {
-		{
-			Name: "time",
-			Description: "Zeigt Sprachchatzeit, Rang und Lieblingskanäle an",
-			Options: []*discordgo.ApplicationCommandOption {
-				{
-					Type: discordgo.ApplicationCommandOptionString,
-					Name: "Zeitraum",
-					Description: "z.B. daily', 'weekly', '1.2.2021', '15.4.2020-17.6.2020'",
-					Required: false,
-				},
-				{
-					Type: discordgo.ApplicationCommandOptionUser,
-					Name: "Nutzer",
-					Description: "Nutzer, dessen Zeit angezeigt werden soll",
-					Required: false,
-				},
-			},
-		},
-	}
-	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"time": timeHandler,
-	}
-)
 
 var commands = [...]Command{
 	{prefix: "ping", handler: pingCommand},
@@ -98,86 +59,7 @@ func helpCommand(content string, channel string, author *discordgo.Member) {
 	dc.ChannelMessageSend(channel, text)
 }
 
-func timeCommandResponse(member *discordgo.Member, dateCondition DateCondition, self bool) string {
-	id := shortUserId(member.User.ID)
-	minutes, _ := calculateUserMinutes(dateCondition, dateCondition(currentDay))
-	for i, user := range minutes {
-		if user.userId == id {
-			// rank and time
-			rankString := "Rang #" + fmt.Sprint(i+1) + " mit " + formatTime(user.minutes)
-			if self {
-				rankString = (*member).Mention() + ", du bist " + rankString
-			} else {
-				rankString = effectiveName(member) + " ist " + rankString
-			}
 
-			type ChannelMinutes struct {
-				channel int16
-				minutes uint32
-			}
-
-			// top channels
-			channels := make([]ChannelMinutes, 0, len(user.channels))
-			for channel, minutes := range user.channels {
-				channels = append(channels, ChannelMinutes{channel: channel, minutes: minutes})
-			}
-			sort.Slice(channels,
-				func(n, n1 int) bool {
-					return channels[n].minutes > channels[n1].minutes
-				})
-			for i := 0; i < 9; i++ {
-				if i >= len(channels) {
-					break
-				}
-				channel, err := dc.Channel(longChannelId(channels[i].channel))
-				name := "[Gelöschter Kanal]"
-				if err == nil {
-					name = channel.Name
-				}
-				rankString += "\n" + digitEmote(i+1) + ": " + name + ": " + formatTime(channels[i].minutes)
-			}
-			return rankString
-		}
-	}
-	return "Keine aufgezeichnete Sprachzeit für den Nutzer "+effectiveName(member) + " gefunden"
-}
-
-func timeHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	time := ""
-	member := i.Member
-
-	if len(i.Data.Options) >= 1 { time = i.Data.Options[0].StringValue() }
-	if len(i.Data.Options) >= 2 { member = MemberValue(i.Data.Options[1]) }
-
-	dateCondition := dateAllTimeCondition
-	var response string
-	// try to parse time as user in case time argument was left out
-	if _, err := strconv.ParseInt(time, 10, 64); err == nil && len(i.Data.Options) == 1 {
-		if found, err := dc.State.Member(config.GuildId, time); err == nil {
-			member = found
-		} else {
-			response = "Invalides Zeitargument"
-		}
-	} else if time != "" {
-		parsedDateCondition, success := parseDateCondition(time, dateAllTimeCondition)
-		if success != parseSuccess {
-			response = "Invaliden Zeitraum angegeben"
-		} else {
-			dateCondition = parsedDateCondition
-		}
-	}
-	// no error response
-	if response == "" {
-		response = timeCommandResponse(member, dateCondition, member == i.Member)
-	}
-	
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionApplicationCommandResponseData{
-			Content: response,
-		},
-	})
-}
 
 func timeCommand(args string, channel string, author *discordgo.Member) {
 	ok, dateCondition, member := parseMemberOrDateCondition(args, channel, author)
@@ -570,3 +452,4 @@ func userCountHandler(args string, channel string, author *discordgo.Member) {
 	}
 	dc.ChannelFileSend(channel, "userCount.png", bytes.NewReader(buffer.Bytes()))
 }
+*/

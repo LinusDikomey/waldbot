@@ -21,6 +21,13 @@ var (
 	ClientSecret string
 )
 
+type Login struct {
+	AccessToken string
+	RefreshToken string
+	AccessExpires uint64
+	Expires uint64
+}
+
 type AccessTokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	ExpiresIn    uint64 `json:"expires_in"`
