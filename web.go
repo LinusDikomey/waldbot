@@ -83,7 +83,7 @@ func addWebHandlers() {
 	handleAuthed("/api/user", userHandler, "GET")
 	handleAuthed("/api/logout", logoutHandler, "GET")
 	go func() {
-		err := http.ListenAndServeTLS(":8080", config.CertFile, config.KeyFile, nil)
+		err := http.ListenAndServeTLS(":8090", config.CertFile, config.KeyFile, nil)
 		if err != nil {
 			log.Fatal("Could not initialize webserver: ", err)
 		}
