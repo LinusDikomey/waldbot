@@ -92,7 +92,7 @@ func main() {
 	date.CurrentDay = date.FromTime(time.Now())
 	
 	updateRankings()
-	//cleanUpRoles()
+	cleanUpRoles()
 
 	mainLoop()
 	sc := make(chan os.Signal, 1)
@@ -154,7 +154,7 @@ func messageReceiveHandler(s *discordgo.Session, msg *discordgo.MessageCreate) {
 
 func minute() {
     data.MinuteUpdate(config.GuildId, saveFiles)
-    //cleanUpRoles()
+    cleanUpRoles()
     updateRankings()
 }
 
@@ -282,7 +282,6 @@ func contains(s []string, e string) bool {
     return false
 }
 
-/*
 func cleanUpRoles() {
 	for _, m := range guild.Members {
 		maxRole := -1
@@ -304,8 +303,9 @@ func cleanUpRoles() {
 			_, err := data.Dc.State.Guild(guild.ID)
 			if err != nil {
 				fmt.Println("Failed to update guild state", err)
-			}
-			err = data.Dc.GuildMemberEdit(m.GuildID, m.User.ID, m.Roles)
+            }
+			
+            _, err = data.Dc.GuildMemberEdit(m.GuildID, m.User.ID, &discordgo.GuildMemberParams{Roles: &m.Roles})
 			if err == nil {
 				fmt.Println("Removed role ", ROLES[i], "from", m.User.Username)
 			} else {
@@ -314,11 +314,11 @@ func cleanUpRoles() {
 		}
 		if maxRole == -1 {
 			m.Roles = append(m.Roles, HELIUM_ID)
-			_, err := dc.State.Guild(guild.ID)	
+			_, err := data.Dc.State.Guild(guild.ID)	
 			if err != nil {
 				fmt.Println("Failed to update guild state", err)
 			}
-			err = dc.GuildMemberEdit(m.GuildID, m.User.ID, m.Roles)
+            _, err = data.Dc.GuildMemberEdit(m.GuildID, m.User.ID, &discordgo.GuildMemberParams{Roles: &m.Roles})
 			if err == nil {
 				fmt.Println("Added Helium role to", m.User.Username)
 			} else {
@@ -327,4 +327,4 @@ func cleanUpRoles() {
 		}
 	}
 }
-*/
+
