@@ -67,6 +67,7 @@ func main() {
 
 	// handlers
 	dc.AddHandler(command.InteractionHandler)
+    dc.AddHandler(readyHandler)
 	dc.Identify.Intents = discordgo.IntentsAll
 	dc.StateEnabled = true
 
@@ -122,6 +123,11 @@ func mainLoop() {
         	}
     	}
  	}()
+}
+
+func readyHandler(s *discordgo.Session, ready *discordgo.Ready) {
+    fmt.Println("Bot is ready!")
+    command.RegisterCommands(s)
 }
 
 func minute() {
