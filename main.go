@@ -16,7 +16,6 @@ import (
 	"waldbot/oauth"
 
 	"github.com/bwmarrin/discordgo"
-	"golang.org/x/exp/slog"
 )
 
 var (
