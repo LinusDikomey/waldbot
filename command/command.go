@@ -18,14 +18,14 @@ type Query struct {
 var (
     ZEITRAUM_OPTION = discordgo.ApplicationCommandOption {
         Type: discordgo.ApplicationCommandOptionString,
-        Name: "Zeitraum",
+        Name: "zeitraum",
         Description: "z.B. daily', 'weekly', '1.2.2021', '15.4.2020-17.6.2020'",
         Required: false,
     }
 
     NUTZER_OPTION = discordgo.ApplicationCommandOption {
         Type: discordgo.ApplicationCommandOptionUser,
-        Name: "Nutzer",
+        Name: "nutzer",
         Description: "Nutzer, dessen Zeit angezeigt werden soll",
         Required: false,
     }
