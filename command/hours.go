@@ -74,7 +74,7 @@ func hoursResponse(query Query) (string, *discordgo.File) {
 
     return "", &discordgo.File {
         Name: "diagram.png",
-        ContentType: "png",
+        ContentType: "image/png",
         Reader: bytes.NewReader(dayTimeChart(
 			fmt.Sprintf("Sprachchat-Zeitverteilung von '%v'", data.EffectiveName(query.member)),
 			xAxis,

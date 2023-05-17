@@ -13,6 +13,7 @@ type Query struct {
     member *discordgo.Member
     dateCondition date.DateCondition
     selfUser bool
+    mate *discordgo.Member
 }
 
 var (
@@ -50,10 +51,19 @@ var (
         Description: "Nutzer, dessen Zeit angezeigt werden soll",
         Required: false,
     }
+
+    MATE_OPTION = discordgo.ApplicationCommandOption {
+        Type: discordgo.ApplicationCommandOptionUser,
+        Name: "mate",
+        Description: "Mate, mit dem die Zeit ausgewertet werden soll",
+        Required: true,
+    }
 )
 
 type Options struct {
-    zeitraum, nutzer bool
+    zeitraum bool
+    nutzer bool
+    mate bool
 }
 
 type SlashCommand struct {
@@ -80,8 +90,20 @@ var (
         {
             name: "channels",
             description: "Zeigt ein Tortendiagramm mit der Verteilung der genutzten Sprachkanäle",
-            response: hoursResponse, // TODO: channels command
+            response: channelsResponse,
             options: Options { zeitraum: true, nutzer: true },
+        },
+        {
+            name: "session",
+            description: "Zeigt die aktuelle Voicechat-Session",
+            response: sessionResponse,
+            options: Options { nutzer: true },
+        },
+        {
+            name: "mate",
+            description: "Zeigt deine Zeit mit einem Nutzer an",
+            response: mateResponse,
+            options: Options { mate: true, zeitraum: true, nutzer: true },
         },
 	}
     registeredCommands = make([]*discordgo.ApplicationCommand, len(SlashCommands))
@@ -169,7 +191,15 @@ func parseOptions(
     }
     for _, option := range options {
         switch option.Name {
+        case "mate":
+            if !validOptions.mate {
+                return query, "invalide Option 'mate'"
+            }
+            query.mate = memberValue(data.Dc, guildID, option)
         case "nutzer":
+            if !validOptions.nutzer {
+                return query, "invalide Option 'nutzer'"
+            }
             query.member = memberValue(data.Dc, guildID, option)
             if query.member == nil {
                 return query, "invalider Nutzer"
@@ -178,6 +208,9 @@ func parseOptions(
                 query.selfUser = false
             }
         case "zeitraum":
+            if !validOptions.zeitraum {
+                return query, "invalide Option 'zeitraum'"
+            }
             parsedDateCondition, status := data.ParseDateCondition(option.StringValue(), date.AllTimeCondition)
             if status != data.ParseSuccess {
                 return query, "invalider Zeitraum"

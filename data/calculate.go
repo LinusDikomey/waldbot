@@ -76,7 +76,7 @@ func (s SortUserStats) Less(i, j int) bool {
 	return s[i].Minutes < s[j].Minutes
 }
 
-func timeWithMates(user int16, dateCondition date.DateCondition) ([]UserStats, uint32) {
+func TimeWithMates(user int16, dateCondition date.DateCondition) ([]UserStats, uint32) {
 	min := func(a, b int32) int32 {
 		if a < b { return a } else { return b }
 	}
