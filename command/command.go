@@ -97,13 +97,12 @@ func UnregisterCommands(dc *discordgo.Session) {
     }
 }
 
-func memberValue(guildID string, o *discordgo.ApplicationCommandInteractionDataOption) *discordgo.Member {
-	userID := o.StringValue()
-	if userID == "" {
-		return nil
-	}
-
-	m, err := data.Dc.State.Member(guildID, userID)
+func memberValue(s *discordgo.Session, guildID string, o *discordgo.ApplicationCommandInteractionDataOption) *discordgo.Member {
+	user := o.UserValue(s)
+    if user == nil {
+        return nil
+    }
+	m, err := data.Dc.State.Member(guildID, user.ID)
 	if err != nil {
 		return nil
 	}
@@ -124,7 +123,7 @@ func parseOptions(
     for _, option := range options {
         switch option.Name {
         case "nutzer":
-            query.member = memberValue(member.GuildID, option)
+            query.member = memberValue(data.Dc, member.GuildID, option)
             if query.member == nil {
                 return query, "invalider Nutzer"
             }
