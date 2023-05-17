@@ -105,6 +105,24 @@ var (
             response: mateResponse,
             options: Options { mate: true, zeitraum: true, nutzer: true },
         },
+        {
+            name: "mates",
+            description: "Zeigt ein Tortendiagramm der Sprachchatzeit mit anderen Nutzern",
+            response: matesResponse,
+            options: Options { zeitraum: true, nutzer: true },
+        },
+        {
+            name: "stonks",
+            description: "Zeigt einen Grahpen der Sprachchatzeit über Zeit",
+            response: stonksResponse,
+            options: Options { zeitraum: true, nutzer: true },
+        },
+        {
+            name: "usercount",
+            description: "Zeigt die Besucher des Discords pro Tag an",
+            response: usercountResponse,
+            options: Options { zeitraum: true },
+        },
 	}
     registeredCommands = make([]*discordgo.ApplicationCommand, len(SlashCommands))
 )
