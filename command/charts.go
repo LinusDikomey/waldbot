@@ -74,7 +74,8 @@ func dayTimeChart(title string, xValues []float64, yValues []float64, maxY float
 	buffer := bytes.NewBuffer([]byte{})
 	err := graph.Render(chart.PNG, buffer)
 	if err != nil {
-		log.Fatal("Error while creating diagram: ", err)
+		log.Println("Error while creating diagram: ", err)
+        return nil
 	}
 	return buffer.Bytes()
 }

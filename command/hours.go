@@ -72,14 +72,19 @@ func hoursResponse(query Query) (string, *discordgo.File) {
 		yAxis[i] = value
 	}
 
+    chart := dayTimeChart(
+        fmt.Sprintf("Sprachchat-Zeitverteilung von '%v'", data.EffectiveName(query.member)),
+        xAxis,
+        yAxis,
+        maxY,
+    )
+    if chart == nil {
+        return "Chart konnte nicht erstellt werden", nil
+    }
+
     return "", &discordgo.File {
         Name: "diagram.png",
         ContentType: "image/png",
-        Reader: bytes.NewReader(dayTimeChart(
-			fmt.Sprintf("Sprachchat-Zeitverteilung von '%v'", data.EffectiveName(query.member)),
-			xAxis,
-			yAxis,
-			maxY,
-		)),
+        Reader: bytes.NewReader(chart),
     }
 }
