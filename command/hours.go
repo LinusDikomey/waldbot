@@ -1,11 +1,15 @@
 package command
 
 import (
+	"bytes"
+	"fmt"
 	"math"
 	"waldbot/data"
+
+	"github.com/bwmarrin/discordgo"
 )
 
-func hoursResponse(query Query) string {
+func hoursResponse(query Query) (string, *discordgo.File) {
 	min := func(a, b int16) int16 {
 		if a < b {
 			return a
@@ -51,7 +55,7 @@ func hoursResponse(query Query) string {
 	}
 
 	if minutesSum == 0 {
-		return "Keine Daten gefunden!"
+		return "Keine Daten gefunden!", nil
 	}
 
 	xAxis := make([]float64, SECTIONS)
@@ -68,11 +72,14 @@ func hoursResponse(query Query) string {
 		yAxis[i] = value
 	}
 
-	dc.ChannelFileSend(channel, "diagram.png", bytes.NewReader(
-		dayTimeChart(
-			fmt.Sprintf("Sprachchat-Zeitverteilung von '%v'", effectiveName(member)),
+    return "", &discordgo.File {
+        Name: "diagram.png",
+        ContentType: "png",
+        Reader: bytes.NewReader(dayTimeChart(
+			fmt.Sprintf("Sprachchat-Zeitverteilung von '%v'", data.EffectiveName(query.member)),
 			xAxis,
 			yAxis,
 			maxY,
-		)))
+		)),
+    }
 }

@@ -38,7 +38,7 @@ type Options struct {
 type SlashCommand struct {
     name string
     description string
-    response func(Query) string
+    response func(Query) (string, *discordgo.File)
     options Options
 }
 
@@ -148,16 +148,22 @@ func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
         if cmd.name == i.ApplicationCommandData().Name {
             query, err := parseOptions(i.ApplicationCommandData().Options, i.Member, cmd.options)
             var content string
+            files := make([]*discordgo.File, 0)
             if err != "" {
                 content = "Fehler: " + err
             } else {
-                content = cmd.response(query)
+                var file *discordgo.File
+                content, file = cmd.response(query)
+                if file != nil {
+                    files = append(files, file)
+                }
             }
             
             s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse {
                 Type: discordgo.InteractionResponseChannelMessageWithSource,
                 Data: &discordgo.InteractionResponseData {
                     Content: content,
+                    Files: files,
                 },
             })
         }

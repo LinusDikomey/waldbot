@@ -1,13 +1,15 @@
 package command
 
 import (
-    "fmt"
-    "sort"
-    "waldbot/date"
-    "waldbot/data"
+	"fmt"
+	"sort"
+	"waldbot/data"
+	"waldbot/date"
+
+	"github.com/bwmarrin/discordgo"
 )
 
-func timeResponse(query Query) string {
+func timeResponse(query Query) (string, *discordgo.File) {
 	id := data.ShortUserId(query.member.User.ID)
 	minutes, _ := data.CalculateUserMinutes(query.dateCondition, query.dateCondition(date.CurrentDay))
 	for i, user := range minutes {
@@ -45,8 +47,8 @@ func timeResponse(query Query) string {
 				}
 				rankString += "\n" + data.DigitEmote(i+1) + ": " + name + ": " + data.FormatTime(channels[i].minutes)
 			}
-			return rankString
+			return rankString, nil
 		}
 	}
-	return "Keine aufgezeichnete Sprachzeit für den Nutzer " + data.EffectiveName(query.member) + " gefunden"
+	return "Keine aufgezeichnete Sprachzeit für den Nutzer " + data.EffectiveName(query.member) + " gefunden", nil
 }
