@@ -66,10 +66,6 @@ func main() {
     data.Dc = dc
 
 	// handlers
-	dc.AddHandler(onServerJoin)
-	dc.AddHandler(onMessageCreate)
-	dc.AddHandler(onChannelConnect)
-	dc.AddHandler(onChannelDisconnect)
 	dc.AddHandler(command.InteractionHandler)
 	dc.Identify.Intents = discordgo.IntentsAll
 	dc.StateEnabled = true
@@ -95,7 +91,7 @@ func main() {
 	date.CurrentDay = date.FromTime(time.Now())
 	
 	updateRankings()
-	cleanUpRoles()
+	//cleanUpRoles()
 
 	mainLoop()
 	sc := make(chan os.Signal, 1)
@@ -130,7 +126,7 @@ func mainLoop() {
 
 func minute() {
     data.MinuteUpdate(config.GuildId, saveFiles)
-    cleanUpRoles()
+    //cleanUpRoles()
     updateRankings()
 }
 
@@ -258,6 +254,7 @@ func contains(s []string, e string) bool {
     return false
 }
 
+/*
 func cleanUpRoles() {
 	for _, m := range guild.Members {
 		maxRole := -1
@@ -276,11 +273,11 @@ func cleanUpRoles() {
 			if roleIndex == -1 { continue }
 
 			m.Roles = append(m.Roles[:roleIndex], m.Roles[roleIndex+1:]...)
-			_, err := dc.State.Guild(guild.ID)
+			_, err := data.Dc.State.Guild(guild.ID)
 			if err != nil {
 				fmt.Println("Failed to update guild state", err)
 			}
-			err = dc.GuildMemberEdit(m.GuildID, m.User.ID, m.Roles)
+			err = data.Dc.GuildMemberEdit(m.GuildID, m.User.ID, m.Roles)
 			if err == nil {
 				fmt.Println("Removed role ", ROLES[i], "from", m.User.Username)
 			} else {
@@ -302,3 +299,4 @@ func cleanUpRoles() {
 		}
 	}
 }
+*/
