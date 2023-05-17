@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"waldbot/oauth"
 
 	"github.com/bwmarrin/discordgo"
+	"golang.org/x/exp/slog"
 )
 
 var (
@@ -68,6 +70,7 @@ func main() {
 	// handlers
 	dc.AddHandler(command.InteractionHandler)
     dc.AddHandler(readyHandler)
+    dc.AddHandler(messageReceiveHandler)
 	dc.Identify.Intents = discordgo.IntentsAll
 	dc.StateEnabled = true
 
@@ -126,6 +129,28 @@ func mainLoop() {
 func readyHandler(s *discordgo.Session, ready *discordgo.Ready) {
     fmt.Println("Bot is ready!")
     command.RegisterCommands(s, config.GuildId)
+}
+
+func messageReceiveHandler(s *discordgo.Session, msg *discordgo.MessageCreate) {
+    content := msg.Content
+    isTryingToRunCommand := false
+    if strings.HasPrefix(content, "!help") {
+        isTryingToRunCommand = true
+    } else if strings.HasPrefix(content, "!") {
+        cmd := content[1:]
+        for _, slashCommand := range command.SlashCommands {
+            if strings.HasPrefix(cmd, slashCommand.Name) {
+                isTryingToRunCommand = true
+                break
+            }
+        }
+    }
+    if isTryingToRunCommand {
+        s.ChannelMessageSend(msg.ChannelID,
+            "Der Waldläufer-Bot benutzt jetzt Slash Commands. " +
+            "Probier Mal, ein Slash: **/** einzutippen und sieh dir die Vorschläge an.",
+        )
+    }
 }
 
 func minute() {

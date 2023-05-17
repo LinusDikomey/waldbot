@@ -67,7 +67,7 @@ type Options struct {
 }
 
 type SlashCommand struct {
-    name string
+    Name string
     description string
     response func(Query) (string, *discordgo.File)
     options Options
@@ -76,49 +76,49 @@ type SlashCommand struct {
 var (
 	SlashCommands = []SlashCommand {
         {
-            name: "time",
+            Name: "time",
 			description: "Zeigt Sprachchatzeit, Rang und Lieblingskanäle an",
             response: timeResponse,
             options: Options { zeitraum: true, nutzer: true },
         },
         {
-            name: "hours",
+            Name: "hours",
             description: "Generiert ein Diagram mit der Sprachchat-Zeitverteilung über einen Zeitraum",
             response: hoursResponse,
             options: Options { zeitraum: true, nutzer: true },
         },
         {
-            name: "channels",
+            Name: "channels",
             description: "Zeigt ein Tortendiagramm mit der Verteilung der genutzten Sprachkanäle",
             response: channelsResponse,
             options: Options { zeitraum: true, nutzer: true },
         },
         {
-            name: "session",
+            Name: "session",
             description: "Zeigt die aktuelle Voicechat-Session",
             response: sessionResponse,
             options: Options { nutzer: true },
         },
         {
-            name: "mate",
+            Name: "mate",
             description: "Zeigt deine Zeit mit einem Nutzer an",
             response: mateResponse,
             options: Options { mate: true, zeitraum: true, nutzer: true },
         },
         {
-            name: "mates",
+            Name: "mates",
             description: "Zeigt ein Tortendiagramm der Sprachchatzeit mit anderen Nutzern",
             response: matesResponse,
             options: Options { zeitraum: true, nutzer: true },
         },
         {
-            name: "stonks",
+            Name: "stonks",
             description: "Zeigt einen Grahpen der Sprachchatzeit über Zeit",
             response: stonksResponse,
             options: Options { zeitraum: true, nutzer: true },
         },
         {
-            name: "usercount",
+            Name: "usercount",
             description: "Zeigt die Besucher des Discords pro Tag an",
             response: usercountResponse,
             options: Options { zeitraum: true },
@@ -157,16 +157,16 @@ func RegisterCommands(dc *discordgo.Session, guildID string) {
         if cmd.options.zeitraum {
             options = append(options, &ZEITRAUM_OPTION)
         }
-        fmt.Println("Adding command:", cmd.name, "UserID: ", dc.State.User.ID)
+        fmt.Println("Adding command:", cmd.Name, "UserID: ", dc.State.User.ID)
         dmPermission := false
 		command, err := dc.ApplicationCommandCreate(dc.State.User.ID, "", &discordgo.ApplicationCommand {
-            Name: cmd.name,
+            Name: cmd.Name,
             Description: cmd.description,
             Options: options,
             DMPermission: &dmPermission,
         })
 		if err != nil {
-			log.Printf("Cannot create '%v' command: %v", cmd.name, err)
+			log.Printf("Cannot create '%v' command: %v", cmd.Name, err)
 		}
         registeredCommands[i] = command
     }
@@ -245,7 +245,7 @@ func parseOptions(
 
 func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
     for _, cmd := range SlashCommands {
-        if cmd.name == i.ApplicationCommandData().Name {
+        if cmd.Name == i.ApplicationCommandData().Name {
             query, err := parseOptions(i.ApplicationCommandData().Options, i.Member, i.GuildID, cmd.options)
             var content string
             files := make([]*discordgo.File, 0)
