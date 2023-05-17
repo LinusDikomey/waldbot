@@ -75,7 +75,7 @@ func RegisterCommands(dc *discordgo.Session) {
         if cmd.options.zeitraum {
             options = append(options, &ZEITRAUM_OPTION)
         }
-		fmt.Println("Adding command:", cmd.name)
+        fmt.Println("Adding command:", cmd.name, "UserID: ", dc.State.User.ID)
 		command, err := dc.ApplicationCommandCreate(dc.State.User.ID, "", &discordgo.ApplicationCommand {
             Name: cmd.name,
             Description: cmd.description,
