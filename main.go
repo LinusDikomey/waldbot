@@ -125,7 +125,7 @@ func mainLoop() {
 
 func readyHandler(s *discordgo.Session, ready *discordgo.Ready) {
     fmt.Println("Bot is ready!")
-    command.RegisterCommands(s)
+    command.RegisterCommands(s, config.GuildId)
 }
 
 func minute() {

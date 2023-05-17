@@ -19,7 +19,28 @@ var (
     ZEITRAUM_OPTION = discordgo.ApplicationCommandOption {
         Type: discordgo.ApplicationCommandOptionString,
         Name: "zeitraum",
-        Description: "z.B. daily', 'weekly', '1.2.2021', '15.4.2020-17.6.2020'",
+        Description: "z.B. daily', 'weekly', 'yearly', '1.2.2021', '15.4.2020-17.6.2020'",
+        // choices geht nicht, da dann andere Werte nicht mehr akzeptiert werden
+        /*
+        Choices: []*discordgo.ApplicationCommandOptionChoice {
+            {
+                Name: "daily",
+                Value: "daily",
+            },
+            {
+                Name: "weekly",
+                Value: "weekly",
+            },
+            {
+                Name: "yearly",
+                Value: "yearly",
+            },
+            {
+                Name: "1.1.2023-9.1.2023",
+                Value: "1.1.2023-9.1.2023",
+            },
+        },
+        */
         Required: false,
     }
 
@@ -66,7 +87,28 @@ var (
     registeredCommands = make([]*discordgo.ApplicationCommand, len(SlashCommands))
 )
 
-func RegisterCommands(dc *discordgo.Session) {
+const FALSE bool = false
+
+func RegisterCommands(dc *discordgo.Session, guildID string) {
+    // clean up previous commands that might still be hanging around
+    oldCommands, err := dc.ApplicationCommands(dc.State.User.ID, "")
+    if err == nil {
+        for _, command := range oldCommands {
+            dc.ApplicationCommandDelete(dc.State.User.ID, "", command.ID)
+        }
+    } else {
+        fmt.Println("Failed to retrieve old application commands:", err)
+    }
+    oldGuildCommands, err := dc.ApplicationCommands(dc.State.User.ID, guildID)
+    if err == nil {
+        for _, command := range oldGuildCommands {
+            dc.ApplicationCommandDelete(dc.State.User.ID, guildID, command.ID)
+        }
+    } else {
+        fmt.Println("Failed to retrieve old application commands:", err)
+    }
+
+
 	for i, cmd := range SlashCommands {
         options := make([]*discordgo.ApplicationCommandOption, 0)
         if cmd.options.nutzer {
@@ -76,10 +118,12 @@ func RegisterCommands(dc *discordgo.Session) {
             options = append(options, &ZEITRAUM_OPTION)
         }
         fmt.Println("Adding command:", cmd.name, "UserID: ", dc.State.User.ID)
+        dmPermission := false
 		command, err := dc.ApplicationCommandCreate(dc.State.User.ID, "", &discordgo.ApplicationCommand {
             Name: cmd.name,
             Description: cmd.description,
             Options: options,
+            DMPermission: &dmPermission,
         })
 		if err != nil {
 			log.Printf("Cannot create '%v' command: %v", cmd.name, err)
