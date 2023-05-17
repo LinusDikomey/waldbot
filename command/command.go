@@ -82,7 +82,7 @@ func RegisterCommands(dc *discordgo.Session) {
             Options: options,
         })
 		if err != nil {
-			log.Panicf("Cannot create '%v' command: %v", cmd.name, err)
+			log.Printf("Cannot create '%v' command: %v", cmd.name, err)
 		}
         registeredCommands[i] = command
     }
