@@ -98,12 +98,14 @@ func UnregisterCommands(dc *discordgo.Session) {
 }
 
 func memberValue(s *discordgo.Session, guildID string, o *discordgo.ApplicationCommandInteractionDataOption) *discordgo.Member {
-	user := o.UserValue(s)
+	user := o.UserValue(nil)
     if user == nil {
+        log.Println("User was nil")
         return nil
     }
-	m, err := data.Dc.State.Member(guildID, user.ID)
+	m, err := s.State.Member(guildID, user.ID)
 	if err != nil {
+        log.Println("User to member err: ", err)
 		return nil
 	}
 
@@ -113,6 +115,7 @@ func memberValue(s *discordgo.Session, guildID string, o *discordgo.ApplicationC
 func parseOptions(
     options []*discordgo.ApplicationCommandInteractionDataOption,
     member *discordgo.Member,
+    guildID string,
     validOptions Options,
 ) (Query, string) {
     query := Query {
@@ -123,9 +126,12 @@ func parseOptions(
     for _, option := range options {
         switch option.Name {
         case "nutzer":
-            query.member = memberValue(data.Dc, member.GuildID, option)
+            query.member = memberValue(data.Dc, guildID, option)
             if query.member == nil {
                 return query, "invalider Nutzer"
+            }
+            if query.member.User.ID != member.User.ID {
+                query.selfUser = false
             }
         case "zeitraum":
             parsedDateCondition, status := data.ParseDateCondition(option.StringValue(), date.AllTimeCondition)
@@ -145,7 +151,7 @@ func parseOptions(
 func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
     for _, cmd := range SlashCommands {
         if cmd.name == i.ApplicationCommandData().Name {
-            query, err := parseOptions(i.ApplicationCommandData().Options, i.Member, cmd.options)
+            query, err := parseOptions(i.ApplicationCommandData().Options, i.Member, i.GuildID, cmd.options)
             var content string
             files := make([]*discordgo.File, 0)
             if err != "" {
