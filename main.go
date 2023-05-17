@@ -78,8 +78,6 @@ func main() {
 		return
 	}
 
-    command.RegisterCommands(dc)
-
 	guild, err = dc.Guild(config.GuildId)
 	if err != nil {
 		log.Fatal("Could not find guild specified in config!")
@@ -127,6 +125,7 @@ func mainLoop() {
 
 func readyHandler(s *discordgo.Session, ready *discordgo.Ready) {
     fmt.Println("Bot is ready!")
+    command.RegisterCommands(s)
 }
 
 func minute() {
