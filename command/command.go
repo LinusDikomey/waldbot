@@ -59,7 +59,7 @@ var (
         {
             name: "channels",
             description: "Zeigt ein Tortendiagramm mit der Verteilung der genutzten Sprachkanäle",
-            //response: 
+            response: hoursResponse, // TODO: channels command
             options: Options { zeitraum: true, nutzer: true },
         },
 	}
@@ -75,7 +75,7 @@ func RegisterCommands(dc *discordgo.Session) {
         if cmd.options.zeitraum {
             options = append(options, &ZEITRAUM_OPTION)
         }
-		fmt.Println("Adding command:", cmd.name, ", stateId:", dc.State.User.ID)
+		fmt.Println("Adding command:", cmd.name)
 		command, err := dc.ApplicationCommandCreate(dc.State.User.ID, "", &discordgo.ApplicationCommand {
             Name: cmd.name,
             Description: cmd.description,
