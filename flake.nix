@@ -25,5 +25,13 @@
       };
       default = self.packages.${system}.waldbot;
     });
+    devShells = forAllSystems (system: let
+      pkgs = nixpkgsFor system;
+    in {
+      default = pkgs.mkShell {
+        inputsFrom = [self.packages.${system}.default];
+        nativeBuildInputs = with pkgs; [gopls];
+      };
+    });
   };
 }

@@ -268,7 +268,11 @@ func parseOptions(
 func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	for _, cmd := range SlashCommands {
 		if cmd.Name == i.ApplicationCommandData().Name {
-			query, err := parseOptions(i.ApplicationCommandData().Options, i.Member, i.GuildID, cmd.options)
+			member, memberErr := s.GuildMember(i.GuildID, i.Member.User.ID)
+			if memberErr != nil {
+				log.Println("Couldn't get member in interaction handler: ", memberErr)
+			}
+			query, err := parseOptions(i.ApplicationCommandData().Options, member, i.GuildID, cmd.options)
 			var content string
 			files := make([]*discordgo.File, 0)
 			if err != "" {
