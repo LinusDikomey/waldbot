@@ -10,7 +10,7 @@ import (
 	drawing "github.com/wcharczuk/go-chart/v2/drawing"
 )
 
-func dayTimeChart(title string, xValues []float64, yValues []float64, maxY float64) []byte {
+func dayTimeChart(title string, xValues []float64, yValues []float64, maxY float64, minY float64) []byte {
 	graph := chart.Chart{
 		Width:  1280,
 		Height: 720,
@@ -27,7 +27,7 @@ func dayTimeChart(title string, xValues []float64, yValues []float64, maxY float
 		YAxis: chart.YAxis{
 			Name: "Prozent online",
 			Range: &chart.ContinuousRange{
-				Min: 0.0,
+				Min: minY,
 				Max: maxY,
 			},
 			ValueFormatter: func(v interface{}) string {
@@ -75,7 +75,7 @@ func dayTimeChart(title string, xValues []float64, yValues []float64, maxY float
 	err := graph.Render(chart.PNG, buffer)
 	if err != nil {
 		log.Println("Error while creating diagram: ", err)
-        return nil
+		return nil
 	}
 	return buffer.Bytes()
 }
