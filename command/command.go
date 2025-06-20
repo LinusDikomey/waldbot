@@ -183,13 +183,13 @@ func UnregisterCommands(dc *discordgo.Session) {
 
 func memberValue(s *discordgo.Session, guildID string, o *discordgo.ApplicationCommandInteractionDataOption) *discordgo.Member {
 	user := o.UserValue(nil)
-    if user == nil {
-        log.Println("User was nil")
-        return nil
-    }
+	if user == nil {
+		log.Println("User was nil")
+		return nil
+	}
 	m, err := s.State.Member(guildID, user.ID)
 	if err != nil {
-        log.Println("User to member err: ", err)
+		log.Println("User to member err: ", err)
 		return nil
 	}
 
@@ -246,7 +246,11 @@ func parseOptions(
 func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
     for _, cmd := range SlashCommands {
         if cmd.Name == i.ApplicationCommandData().Name {
-            query, err := parseOptions(i.ApplicationCommandData().Options, i.Member, i.GuildID, cmd.options)
+			member, memberErr := s.GuildMember(i.GuildID, i.Member.User.ID)
+			if memberErr != nil {
+				log.Println("Couldn't get member in interaction handler: ", memberErr)
+			}
+			query, err := parseOptions(i.ApplicationCommandData().Options, member, i.GuildID, cmd.options)
             var content string
             files := make([]*discordgo.File, 0)
             if err != "" {
